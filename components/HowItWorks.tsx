@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { PhoneCall, CalendarDays, Wrench, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 const steps = [
@@ -66,42 +66,45 @@ export default function HowItWorks() {
             const isHighlighted = activeStep === index;
 
             return (
-              <div
+              <motion.div
                 key={step.id}
+                layout
                 onClick={() => setActiveStep(index)}
-                className={`relative overflow-hidden rounded-3xl transition-all duration-500 ease-in-out cursor-pointer flex flex-col ${
+                className={`relative overflow-hidden rounded-3xl cursor-pointer flex flex-col transition-colors duration-300 ${
                   isHighlighted 
-                    ? 'bg-blue-600 text-white flex-grow shadow-xl shadow-blue-600/20 h-[280px] lg:h-auto' 
-                    : 'bg-slate-50 text-slate-900 border border-slate-100 hover:bg-slate-100 flex-none h-[80px] lg:h-auto lg:w-[100px]'
+                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20 flex-grow basis-auto h-[280px] lg:h-auto lg:w-auto' 
+                    : 'bg-slate-50 text-slate-900 border border-slate-100 hover:bg-slate-100 flex-none basis-[80px] h-[80px] lg:h-auto lg:w-[100px]'
                 }`}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
               >
-                {/* Inactive Content */}
-                <div className={`absolute inset-0 flex lg:flex-col items-center justify-between p-6 lg:py-8 transition-opacity duration-300 ${isHighlighted ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-                  <span className="text-sm font-bold tracking-wider text-slate-400">
-                    {step.id}.
-                  </span>
-                  <Icon className="w-6 h-6 text-blue-600" />
-                </div>
-
-                {/* Active Content */}
-                <div className={`absolute inset-0 flex flex-col p-6 lg:p-8 transition-opacity duration-300 delay-100 ${isHighlighted ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <div className="flex items-center justify-between mb-auto">
-                    <span className="text-sm font-bold tracking-wider text-blue-200">
+                <div className="p-6 lg:p-8 flex flex-col h-full">
+                  <div className={`flex items-center justify-between transition-all duration-300 ${isHighlighted ? 'mb-auto' : 'lg:flex-col lg:justify-center lg:h-full lg:gap-4'}`}>
+                    <span className={`text-sm font-bold tracking-wider ${isHighlighted ? 'text-blue-200' : 'text-slate-400'}`}>
                       {step.id}.
                     </span>
-                    <Icon className="w-8 h-8 text-white" />
+                    <Icon className={`w-8 h-8 ${isHighlighted ? 'text-white' : 'text-blue-600'}`} />
                   </div>
                   
-                  <div className="mt-auto">
-                    <h3 className="text-2xl font-bold mb-2 lg:mb-3 font-outfit whitespace-nowrap">
-                      {step.title}
-                    </h3>
-                    <p className="leading-relaxed text-blue-100 text-sm lg:text-base line-clamp-2 lg:line-clamp-none">
-                      {step.description}
-                    </p>
-                  </div>
+                  <AnimatePresence>
+                    {isHighlighted && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                        className="mt-auto"
+                      >
+                        <h3 className="text-2xl font-bold mb-2 lg:mb-3 font-outfit whitespace-nowrap">
+                          {step.title}
+                        </h3>
+                        <p className="leading-relaxed text-blue-100 text-sm lg:text-base line-clamp-2 lg:line-clamp-none">
+                          {step.description}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

@@ -15,10 +15,10 @@ export default function Header() {
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <span className="text-white font-bold text-xl leading-none">S</span>
               </div>
-              <span className="font-outfit font-bold text-xl tracking-tight text-slate-900">
+              <span className="font-outfit font-bold text-lg sm:text-xl tracking-tight text-slate-900 hidden sm:block">
                 Said Kälte- & Klimatechnik
               </span>
             </Link>
@@ -66,18 +66,18 @@ export default function Header() {
           </div>
 
           {/* Mobile menu button & Icons */}
-          <div className="flex md:hidden items-center gap-4">
-            <Link href="/account" className="text-slate-600 hover:text-blue-600 transition-colors">
+          <div className="flex md:hidden items-center gap-3">
+            <Link href="/account" className="text-slate-600 hover:text-blue-600 transition-colors p-1">
               <User className="w-5 h-5" />
             </Link>
-            <button className="text-slate-600 hover:text-blue-600 transition-colors relative">
+            <button className="text-slate-600 hover:text-blue-600 transition-colors relative p-1">
               <ShoppingCart className="w-5 h-5" />
-              <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 0
               </span>
             </button>
             <button 
-              className="text-slate-600 hover:text-slate-900 focus:outline-none ml-1"
+              className="text-slate-600 hover:text-slate-900 focus:outline-none p-1 ml-1"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

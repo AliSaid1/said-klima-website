@@ -140,27 +140,27 @@ export default function AccountPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-sm text-slate-500">
-                        <th className="pb-3 font-medium">Rechnungs-Nr.</th>
-                        <th className="pb-3 font-medium">Datum</th>
-                        <th className="pb-3 font-medium">Betrag</th>
-                        <th className="pb-3 font-medium">Status</th>
-                        <th className="pb-3 font-medium text-right">Aktion</th>
+                        <th className="pb-3 font-medium whitespace-nowrap pr-4">Rechnungs-Nr.</th>
+                        <th className="pb-3 font-medium whitespace-nowrap pr-4">Datum</th>
+                        <th className="pb-3 font-medium whitespace-nowrap pr-4">Betrag</th>
+                        <th className="pb-3 font-medium whitespace-nowrap pr-4">Status</th>
+                        <th className="pb-3 font-medium text-right whitespace-nowrap">Aktion</th>
                       </tr>
                     </thead>
                     <tbody className="text-sm">
                       <tr className="border-b border-slate-100">
-                        <td className="py-4 font-medium text-slate-900">RE-2023-001</td>
-                        <td className="py-4 text-slate-600">15.05.2023</td>
-                        <td className="py-4 text-slate-900">1.398,00 €</td>
-                        <td className="py-4"><span className="text-green-600 font-medium">Bezahlt</span></td>
-                        <td className="py-4 text-right"><button className="text-blue-600 hover:underline">PDF Download</button></td>
+                        <td className="py-4 font-medium text-slate-900 whitespace-nowrap pr-4">RE-2023-001</td>
+                        <td className="py-4 text-slate-600 whitespace-nowrap pr-4">15.05.2023</td>
+                        <td className="py-4 text-slate-900 whitespace-nowrap pr-4">1.398,00 €</td>
+                        <td className="py-4 whitespace-nowrap pr-4"><span className="text-green-600 font-medium">Bezahlt</span></td>
+                        <td className="py-4 text-right whitespace-nowrap"><button className="text-blue-600 hover:underline">PDF Download</button></td>
                       </tr>
                       <tr className="border-b border-slate-100">
-                        <td className="py-4 font-medium text-slate-900">RE-2023-042</td>
-                        <td className="py-4 text-slate-600">10.11.2023</td>
-                        <td className="py-4 text-slate-900">149,00 €</td>
-                        <td className="py-4"><span className="text-green-600 font-medium">Bezahlt</span></td>
-                        <td className="py-4 text-right"><button className="text-blue-600 hover:underline">PDF Download</button></td>
+                        <td className="py-4 font-medium text-slate-900 whitespace-nowrap pr-4">RE-2023-042</td>
+                        <td className="py-4 text-slate-600 whitespace-nowrap pr-4">10.11.2023</td>
+                        <td className="py-4 text-slate-900 whitespace-nowrap pr-4">149,00 €</td>
+                        <td className="py-4 whitespace-nowrap pr-4"><span className="text-green-600 font-medium">Bezahlt</span></td>
+                        <td className="py-4 text-right whitespace-nowrap"><button className="text-blue-600 hover:underline">PDF Download</button></td>
                       </tr>
                     </tbody>
                   </table>
@@ -181,7 +181,7 @@ export default function AccountPage() {
                       <h3 className="font-bold text-slate-900 text-lg">Saisonale Wartung</h3>
                       <p className="text-slate-600 mb-2">Mittwoch, 24. Mai 2024 • 10:00 - 12:00 Uhr</p>
                       <p className="text-sm text-slate-500">Techniker: Herr Schmidt</p>
-                      <div className="mt-4 flex gap-3">
+                      <div className="mt-4 flex flex-wrap gap-3">
                         <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">Verschieben</button>
                         <button className="px-4 py-2 bg-white border border-red-200 text-red-600 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors">Stornieren</button>
                       </div>
