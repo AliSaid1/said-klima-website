@@ -1,8 +1,9 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, Check, Shield, Wrench, ArrowLeft } from 'lucide-react';
+import { Check, ArrowLeft } from 'lucide-react';
 import { products } from '@/lib/data';
 import { notFound } from 'next/navigation';
+import ProductActions from '@/components/ProductActions';
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -27,7 +28,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               alt={product.name}
               fill
               className="object-cover"
-              referrerPolicy="no-referrer"
               priority
             />
           </div>
@@ -46,7 +46,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </h1>
           
           <div className="flex items-center gap-4 mb-6">
-            <span className="text-3xl font-bold text-slate-900">{product.price} €</span>
+            <span className="text-3xl font-bold text-slate-900">ab {product.price.toLocaleString('de-DE')} €</span>
             <span className="text-sm font-medium px-3 py-1 bg-green-100 text-green-800 rounded-full flex items-center gap-1">
               <Check className="w-4 h-4" /> {product.availability}
             </span>
@@ -75,34 +75,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          {/* Service Selection */}
-          <div className="mb-8 space-y-3">
-            <h3 className="font-bold text-slate-900 mb-2">Service-Optionen</h3>
-            <label className="flex items-start gap-4 p-4 border border-blue-600 bg-blue-50 rounded-2xl cursor-pointer">
-              <input type="radio" name="service" className="mt-1 w-4 h-4 text-blue-600" defaultChecked />
-              <div>
-                <p className="font-bold text-slate-900">Mit Installation (+ 499 €)</p>
-                <p className="text-sm text-slate-600">Fachgerechte Montage durch unsere zertifizierten Techniker.</p>
-              </div>
-            </label>
-            <label className="flex items-start gap-4 p-4 border border-slate-200 hover:border-slate-300 rounded-2xl cursor-pointer transition-colors">
-              <input type="radio" name="service" className="mt-1 w-4 h-4 text-blue-600" />
-              <div>
-                <p className="font-bold text-slate-900">Ohne Installation</p>
-                <p className="text-sm text-slate-600">Nur Lieferung des Geräts.</p>
-              </div>
-            </label>
-          </div>
-
-          <button className="w-full flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
-            <ShoppingCart className="w-6 h-6" />
-            In den Warenkorb
-          </button>
-
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm text-slate-500">
-            <span className="flex items-center gap-2"><Shield className="w-4 h-4" /> Sichere Zahlung</span>
-            <span className="flex items-center gap-2"><Wrench className="w-4 h-4" /> Profi-Service</span>
-          </div>
+          <ProductActions product={{ id: product.id, name: product.name, price: product.price, image: product.image }} />
         </div>
       </div>
 

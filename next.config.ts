@@ -1,5 +1,11 @@
 import type {NextConfig} from 'next';
 
+// Development only: Bypass corporate proxy SSL certificate issues
+// Remove this line when deploying to production
+if (process.env.NODE_ENV === 'development') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   eslint: {
@@ -8,24 +14,17 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Allow access to remote image placeholder.
+  // Allow access to Supabase Storage images
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'picsum.photos',
+        hostname: '*.supabase.co',
         port: '',
-        pathname: '/**', // This allows any path under the hostname
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
+        pathname: '/storage/v1/object/public/**',
       },
     ],
   },
-  output: 'standalone',
   transpilePackages: ['motion'],
   webpack: (config, {dev}) => {
     // HMR is disabled in AI Studio via DISABLE_HMR env var.

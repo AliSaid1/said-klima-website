@@ -10,19 +10,19 @@ const services = [
     id: 'diagnostics',
     title: 'Diagnose & Reparaturen',
     description: 'Schnelle und präzise Fehleranalyse. Wir finden das Problem und beheben es direkt vor Ort, damit Sie nicht lange schwitzen müssen.',
-    image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?q=80&w=1000&auto=format&fit=crop'
+    image: '/images/diagnose.avif'
   },
   {
     id: 'installation',
     title: 'Installation & Austausch',
     description: 'Wir helfen Ihnen bei der Auswahl der richtigen Klimaanlage und installieren sie sauber, sicher und nach den neuesten Standards.',
-    image: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?q=80&w=1000&auto=format&fit=crop'
+    image: '/images/installation.avif'
   },
   {
     id: 'maintenance',
     title: 'Saisonale Wartung',
     description: 'Verhindert Ausfälle, senkt die Energiekosten und hält Ihr System bereit für den Sommer. Regelmäßige Pflege zahlt sich aus.',
-    image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=1000&auto=format&fit=crop'
+    image: '/images/wartung.avif'
   }
 ];
 
@@ -52,7 +52,6 @@ export default function Services() {
                   alt={currentService.title}
                   fill
                   className="object-cover"
-                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent"></div>
               </motion.div>

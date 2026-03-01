@@ -1,12 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Phone, Menu, X, User, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useCart } from '@/lib/cart-context';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { itemCount } = useCart();
+  const [userName, setUserName] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const vorname = user.user_metadata?.vorname;
+        setUserName(vorname || user.email?.split('@')[0] || 'Konto');
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const vorname = session.user.user_metadata?.vorname;
+        setUserName(vorname || session.user.email?.split('@')[0] || 'Konto');
+      } else {
+        setUserName(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
@@ -45,16 +71,18 @@ export default function Header() {
             </a>
             
             <div className="flex items-center gap-4 border-l border-slate-200 pl-6">
-              <Link href="/account" className="text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-2 text-sm font-medium">
+              <Link href={userName ? '/account' : '/account/login'} className="text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-2 text-sm font-medium">
                 <User className="w-5 h-5" />
-                <span className="hidden lg:inline">Login</span>
+                <span className="hidden lg:inline">{userName || 'Anmelden'}</span>
               </Link>
-              <button className="text-slate-600 hover:text-blue-600 transition-colors relative">
+              <Link href="/cart" className="text-slate-600 hover:text-blue-600 transition-colors relative">
                 <ShoppingCart className="w-5 h-5" />
-                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  0
-                </span>
-              </button>
+                {isClient && itemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    {itemCount}
+                  </span>
+                )}
+              </Link>
             </div>
 
             <Link 
@@ -67,16 +95,18 @@ export default function Header() {
 
           {/* Mobile menu button & Icons */}
           <div className="flex md:hidden items-center gap-3">
-            <Link href="/account" className="text-slate-600 hover:text-blue-600 transition-colors p-1">
+            <Link href={userName ? '/account' : '/account/login'} className="text-slate-600 hover:text-blue-600 transition-colors p-1">
               <User className="w-5 h-5" />
             </Link>
-            <button className="text-slate-600 hover:text-blue-600 transition-colors relative p-1">
+            <Link href="/cart" className="text-slate-600 hover:text-blue-600 transition-colors relative p-1">
               <ShoppingCart className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                0
-              </span>
-            </button>
-            <button 
+              {isClient && itemCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {itemCount}
+                </span>
+              )}
+            </Link>
+            <button
               className="text-slate-600 hover:text-slate-900 focus:outline-none p-1 ml-1"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >

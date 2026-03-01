@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart, Search, Filter, ChevronDown, Check } from 'lucide-react';
+import { ShoppingCart, Search, Filter } from 'lucide-react';
 import { products } from '@/lib/data';
 
 export default function ShopPage() {
@@ -146,7 +146,6 @@ export default function ShopPage() {
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      referrerPolicy="no-referrer"
                     />
                   </div>
                   <div className="p-5 flex flex-col flex-grow">

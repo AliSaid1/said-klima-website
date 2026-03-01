@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { ShoppingCart, Search, Filter, X, Info } from 'lucide-react';
+import Link from 'next/link';
+import { ShoppingCart, Search, X, Info, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const products = [
@@ -11,7 +12,7 @@ const products = [
     name: 'Daikin Sensira',
     type: 'Wandgerät',
     price: 'ab 899 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['A++ Kühlen', 'Flüsterleise', 'Online-Controller'],
     description: 'Das Daikin Sensira Wandgerät bietet hervorragendes Preis-Leistungs-Verhältnis und zuverlässige Kühlung mit minimalem Energieverbrauch.'
   },
@@ -20,7 +21,7 @@ const products = [
     name: 'Daikin Perfera',
     type: 'Wandgerät',
     price: 'ab 1.199 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['A+++ Kühlen', 'Flash Streamer', '3D-Luftstrom'],
     description: 'Perfera sorgt für erstklassige Luftqualität und optimalen Komfort dank 3D-Luftstrom und fortschrittlicher Luftreinigung.'
   },
@@ -29,7 +30,7 @@ const products = [
     name: 'Daikin Stylish',
     type: 'Wandgerät',
     price: 'ab 1.499 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['Preisgekröntes Design', 'Coanda-Effekt', 'Grid-Eye-Sensor'],
     description: 'Kompaktes und funktionales Design, das sich in jedes Interieur einfügt. Höchste Effizienz und intelligenter Komfort.'
   },
@@ -38,7 +39,7 @@ const products = [
     name: 'Daikin Emura',
     type: 'Wandgerät',
     price: 'ab 1.799 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['Ikonisches Design', 'Intelligenter Sensor', 'Luftreinigung'],
     description: 'Das ultimative Klimagerät in Sachen Design und Technologie. Emura vereint Ästhetik mit herausragender Leistung.'
   },
@@ -47,7 +48,7 @@ const products = [
     name: 'Daikin Nexura',
     type: 'Truhengerät',
     price: 'ab 1.599 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['Strahlungswärme', 'Leiser Betrieb', 'Elegantes Design'],
     description: 'Nexura bietet das Beste aus zwei Welten: die Effizienz einer Wärmepumpe und den Komfort einer traditionellen Heizung.'
   },
@@ -56,7 +57,7 @@ const products = [
     name: 'Daikin Truhengerät',
     type: 'Truhengerät',
     price: 'ab 1.299 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['Bodennahe Montage', 'Dualer Luftstrom', 'Kompakt'],
     description: 'Ideal für die Installation unter Fenstern. Sorgt für eine optimale Wärmeverteilung im Raum.'
   },
@@ -65,7 +66,7 @@ const products = [
     name: 'Daikin Deckenkassette',
     type: 'Kassettengerät',
     price: 'ab 1.899 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['360° Luftstrom', 'Unsichtbare Montage', 'Selbstreinigend'],
     description: 'Perfekt für abgehängte Decken in gewerblichen Räumen. Bietet eine gleichmäßige Luftverteilung ohne Zugluft.'
   },
@@ -74,7 +75,7 @@ const products = [
     name: 'Daikin Kanalgerät',
     type: 'Kanalgerät',
     price: 'ab 2.199 €',
-    image: 'https://images.unsplash.com/photo-1615873968403-89e068629265?q=80&w=800&auto=format&fit=crop',
+    image: '/images/product-placeholder.avif',
     features: ['Unsichtbar', 'Flexibel', 'Leistungsstark'],
     description: 'Die diskreteste Lösung für die Klimatisierung. Nur die Ansaug- und Ausblasgitter sind sichtbar.'
   }
@@ -154,7 +155,6 @@ export default function Products() {
                     alt={product.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                     <span className="opacity-0 group-hover:opacity-100 bg-white text-slate-900 px-4 py-2 rounded-full text-sm font-medium transition-opacity flex items-center gap-2">
@@ -199,6 +199,18 @@ export default function Products() {
           </div>
         )}
 
+        {/* CTA to Shop */}
+        <div className="text-center mt-16">
+          <p className="text-slate-500 mb-6 text-lg">Entdecken Sie unser komplettes Sortiment im Online-Shop</p>
+          <Link
+            href="/shop"
+            className="inline-flex items-center gap-2 px-8 py-4 text-base font-medium rounded-full text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 hover:shadow-xl"
+          >
+            Alle Produkte ansehen
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
+
       </div>
 
       {/* Product Details Modal */}
@@ -224,7 +236,6 @@ export default function Products() {
                   alt={selectedProduct.name}
                   fill
                   className="object-cover"
-                  referrerPolicy="no-referrer"
                 />
                 <button 
                   onClick={() => setSelectedProduct(null)}

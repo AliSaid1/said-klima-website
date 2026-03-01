@@ -20,11 +20,10 @@ export default function AboutPage() {
         </div>
         <div className="relative h-[400px] sm:h-[500px] rounded-3xl overflow-hidden shadow-2xl">
           <Image
-            src="https://images.unsplash.com/photo-1581094288338-2314dddb7ece?q=80&w=1000&auto=format&fit=crop"
+            src="/images/installation.avif"
             alt="Techniker bei der Arbeit"
             fill
             className="object-cover"
-            referrerPolicy="no-referrer"
           />
         </div>
       </div>
