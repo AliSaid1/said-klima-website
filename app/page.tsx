@@ -1,9 +1,10 @@
-import Header from '@/components/Header';
-import Hero from '@/components/Hero';
-import Services from '@/components/Services';
-import HowItWorks from '@/components/HowItWorks';
-import Products from '@/components/Products';
-import Footer from '@/components/Footer';
+import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
+import Hero from '@/components/home/Hero';
+import Services from '@/components/home/Services';
+// HowItWorks has been archived and removed from the live homepage
+import Products from '@/components/home/Products';
+
 
 export default function Home() {
   return (
@@ -11,7 +12,7 @@ export default function Home() {
       <Header />
       <Hero />
       <Services />
-      <HowItWorks />
+      {/* HowItWorks was intentionally archived and is not shown on the site anymore. */}
       <Products />
       <Footer />
     </main>

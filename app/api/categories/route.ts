@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { requireAdmin } from '@/lib/auth-guard';
 import { kategorieSchema } from '@/lib/validators/artikel';
+import { apiDbError } from '@/lib/api-response';
 
 // GET /api/categories
 export async function GET() {
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('kategorien')
     .select('*')
     .order('name', { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiDbError(error);
   }
 
   // Build tree structure
@@ -20,43 +22,46 @@ export async function GET() {
   return NextResponse.json({ data: tree, flat: data });
 }
 
-// POST /api/categories
+// POST /api/categories — admin only
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const { error: authErr } = await requireAdmin();
+  if (authErr) return authErr;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-  }
+  const admin = createAdminClient();
+
 
   const body = await request.json();
   const parsed = kategorieSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const flat = parsed.error.flatten();
+    const messages = [
+      ...flat.formErrors,
+      ...Object.entries(flat.fieldErrors).map(([field, errs]) => `${field}: ${(errs as string[]).join(', ')}`),
+    ].join('; ');
+    return NextResponse.json({ error: messages || 'Validierungsfehler' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('kategorien')
     .insert(parsed.data)
     .select()
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiDbError(error);
   }
 
   return NextResponse.json({ data }, { status: 201 });
 }
 
-// PUT /api/categories (update)
+// PUT /api/categories — admin only
 export async function PUT(request: NextRequest) {
-  const supabase = await createClient();
+  const { error: authErr } = await requireAdmin();
+  if (authErr) return authErr;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-  }
+  const admin = createAdminClient();
+
 
   const body = await request.json();
   const { id, ...updateData } = body;
@@ -67,10 +72,15 @@ export async function PUT(request: NextRequest) {
 
   const parsed = kategorieSchema.partial().safeParse(updateData);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const flat = parsed.error.flatten();
+    const messages = [
+      ...flat.formErrors,
+      ...Object.entries(flat.fieldErrors).map(([field, errs]) => `${field}: ${(errs as string[]).join(', ')}`),
+    ].join('; ');
+    return NextResponse.json({ error: messages || 'Validierungsfehler' }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('kategorien')
     .update(parsed.data)
     .eq('id', id)
@@ -78,20 +88,19 @@ export async function PUT(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiDbError(error);
   }
 
   return NextResponse.json({ data });
 }
 
-// DELETE /api/categories
+// DELETE /api/categories — admin only
 export async function DELETE(request: NextRequest) {
-  const supabase = await createClient();
+  const { error: authErr } = await requireAdmin();
+  if (authErr) return authErr;
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
-  }
+  const admin = createAdminClient();
+
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
@@ -101,7 +110,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   // Check if category has products
-  const { count } = await supabase
+  const { count } = await admin
     .from('artikel')
     .select('*', { count: 'exact', head: true })
     .eq('kategorie_id', id);
@@ -113,13 +122,13 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  const { error } = await supabase
+  const { error } = await admin
     .from('kategorien')
     .delete()
     .eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiDbError(error);
   }
 
   return NextResponse.json({ success: true });

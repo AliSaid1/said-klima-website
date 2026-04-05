@@ -1,25 +1,41 @@
-export default function AGBPage() {
+import { createClient } from '@/lib/supabase/server';
+
+export default async function AGBPage() {
+  // Server-side fetch from Supabase to get the published AGB content
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('rechtstexte')
+    .select('titel, content_html, aktualisiert_am, veröffentlicht')
+    .eq('slug', 'agb')
+    .single();
+
+  if (error || !data) {
+    return (
+      <div>
+        <h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
+        <p className="text-slate-600">Die AGB konnten nicht geladen werden.</p>
+      </div>
+    );
+  }
+  // Cast to any for safe property access (column name includes non-ASCII characters)
+  const page = data as any;
+  // Normalize the published flag: prefer ASCII 'published' if present
+  const published = page.published ?? page['veröffentlicht'];
+
+  // If the entry exists but is not published, show a message
+  if (!published) {
+    return (
+      <div>
+        <h1>{page.titel || 'Allgemeine Geschäftsbedingungen (AGB)'}</h1>
+        <p className="text-slate-600">Diese Seite ist derzeit nicht veröffentlicht.</p>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
-      
-      <h2>§1 Geltungsbereich</h2>
-      <p>Für die Geschäftsbeziehung zwischen Said Kälte- und Klimatechnik GmbH (nachfolgend „Verkäufer“) und dem Kunden (nachfolgend „Kunde“) gelten ausschließlich die nachfolgenden Allgemeinen Geschäftsbedingungen in ihrer zum Zeitpunkt der Bestellung gültigen Fassung.</p>
-
-      <h2>§2 Vertragsschluss</h2>
-      <p>Die Darstellung der Produkte im Online-Shop stellt kein rechtlich bindendes Angebot, sondern einen unverbindlichen Online-Katalog dar. Durch Anklicken des Buttons „Kaufen“ geben Sie eine verbindliche Bestellung der im Warenkorb enthaltenen Waren ab. Die Bestätigung des Eingangs der Bestellung folgt unmittelbar nach dem Absenden der Bestellung und stellt noch keine Vertragsannahme dar. Wir können Ihre Bestellung durch Versand einer Auftragsbestätigung per E-Mail oder durch Auslieferung der Ware innerhalb von fünf Tagen annehmen.</p>
-
-      <h2>§3 Preise und Versandkosten</h2>
-      <p>Die auf den Produktseiten genannten Preise enthalten die gesetzliche Mehrwertsteuer und sonstige Preisbestandteile. Zusätzlich zu den angegebenen Preisen berechnen wir für die Lieferung innerhalb Deutschlands Versandkosten. Die Versandkosten werden Ihnen auf den Produktseiten, im Warenkorbsystem und auf der Bestellseite nochmals deutlich mitgeteilt.</p>
-
-      <h2>§4 Lieferung</h2>
-      <p>Die Lieferung erfolgt nur innerhalb Deutschlands. Die Lieferzeit beträgt, sofern nicht beim Angebot anders angegeben, 3-5 Werktage.</p>
-
-      <h2>§5 Zahlung</h2>
-      <p>Die Zahlung erfolgt wahlweise per Vorkasse, Kreditkarte, PayPal oder auf Rechnung (nur für Bestandskunden oder B2B).</p>
-
-      <h2>§6 Eigentumsvorbehalt</h2>
-      <p>Bis zur vollständigen Zahlung bleibt die Ware unser Eigentum.</p>
-    </>
+    <div>
+      <h1 className="sr-only">{page.titel || 'Allgemeine Geschäftsbedingungen (AGB)'}</h1>
+      <div className="rte-content" dangerouslySetInnerHTML={{ __html: page.content_html || '' }} />
+    </div>
   );
 }

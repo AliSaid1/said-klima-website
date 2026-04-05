@@ -7,6 +7,12 @@ import { Package, Plus, Search, Trash2, Edit, ChevronLeft, ChevronRight } from '
 import StatusBadge from '@/components/admin/StatusBadge';
 import { toast } from 'sonner';
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+function storageUrl(path: string) {
+  if (path.startsWith('http')) return path;
+  return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+}
+
 interface Artikel {
   id: string;
   artikelnummer: string;
@@ -69,14 +75,15 @@ export default function ProductListPage() {
   }, [fetchProducts]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Produkt wirklich löschen?')) return;
+    if (!confirm('Produkt wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
 
     const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+    const json = await res.json().catch(() => ({}));
     if (res.ok) {
-      toast.success('Produkt gelöscht');
+      toast.success('Produkt wurde erfolgreich gelöscht');
       fetchProducts();
     } else {
-      toast.error('Fehler beim Löschen');
+      toast.error(json.error || 'Das Produkt konnte nicht gelöscht werden');
     }
   };
 
@@ -197,7 +204,7 @@ export default function ProductListPage() {
                           <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden relative">
                             {firstImage?.medien_dateien?.speicherpfad ? (
                               <Image
-                                src={firstImage.medien_dateien.speicherpfad}
+                                src={storageUrl(firstImage.medien_dateien.speicherpfad)}
                                 alt={firstImage.alt_text || product.titel}
                                 fill
                                 className="object-cover"

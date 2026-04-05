@@ -46,7 +46,12 @@ interface Buchung {
   geplant_bis: string;
   status: string;
   hinweise: string | null;
+  kontakt_name: string | null;
+  kontakt_email: string | null;
+  kontakt_telefon: string | null;
   dienstleistungen: { name: string } | { name: string }[] | null;
+  techniker: { vorname: string; nachname: string } | null;
+  buchung_dienstleistungen?: { dienstleistungen: { name: string } }[] | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -197,12 +202,13 @@ export default function AccountPage() {
     if (activeTab !== 'appointments' || !authUser) return;
     const load = async () => {
       setBookingsLoading(true);
-      const { data } = await supabase
-        .from('buchungen')
-        .select('id, geplant_von, geplant_bis, status, hinweise, dienstleistungen(name)')
-        .eq('benutzer_id', authUser.id)
-        .order('geplant_von', { ascending: false });
-      setBuchungen((data as unknown as Buchung[]) || []);
+      try {
+        const res = await fetch('/api/bookings');
+        const json = await res.json();
+        setBuchungen((json.data || []) as Buchung[]);
+      } catch {
+        setBuchungen([]);
+      }
       setBookingsLoading(false);
     };
     load();
@@ -622,29 +628,55 @@ export default function AccountPage() {
                   <div className="text-center py-16">
                     <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <p className="text-slate-500 text-lg font-medium">Keine Termine</p>
-                    <p className="text-slate-400 text-sm mt-1">Ihre gebuchten Termine werden hier angezeigt.</p>
+                    <p className="text-slate-400 text-sm mt-1">Ihre angefragten Termine werden hier angezeigt.</p>
+                    <a href="/contact?thema=Wartung" className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
+                      <Calendar className="w-4 h-4" /> Service anfragen
+                    </a>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {buchungen.map((b) => {
                       const isPast = new Date(b.geplant_bis) < new Date();
+                      // Get service name(s)
+                      const allServices: string[] = [];
+                      if (b.buchung_dienstleistungen && Array.isArray(b.buchung_dienstleistungen)) {
+                        b.buchung_dienstleistungen.forEach((bd: { dienstleistungen: { name: string } }) => {
+                          if (bd.dienstleistungen?.name) allServices.push(bd.dienstleistungen.name);
+                        });
+                      }
+                      if (allServices.length === 0) {
+                        const dl = b.dienstleistungen;
+                        if (Array.isArray(dl)) {
+                          dl.forEach((d) => { if (d?.name) allServices.push(d.name); });
+                        } else if (dl?.name) {
+                          allServices.push(dl.name);
+                        }
+                      }
+                      const serviceName = allServices.length > 0 ? allServices.join(', ') : 'Termin';
+                      const techName = b.techniker ? `${b.techniker.vorname} ${b.techniker.nachname}` : null;
+
                       return (
-                        <div key={b.id} className={`border rounded-2xl p-6 ${isPast ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50'}`}>
+                        <div key={b.id} className={`border rounded-2xl p-6 transition-all ${isPast ? 'border-slate-200 bg-slate-50' : 'border-blue-200 bg-blue-50/60'}`}>
                           <div className="flex items-start gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isPast ? 'bg-slate-300 text-white' : 'bg-blue-600 text-white'}`}>
-                              <span className="text-xs font-medium uppercase">{new Date(b.geplant_von).toLocaleDateString('de-DE', { month: 'short' })}</span>
-                              <span className="text-lg font-bold leading-none">{new Date(b.geplant_von).getDate()}</span>
+                            <div className={`w-14 h-14 rounded-xl flex flex-col items-center justify-center flex-shrink-0 ${isPast ? 'bg-slate-300 text-white' : 'bg-blue-600 text-white'}`}>
+                              <span className="text-[10px] font-semibold uppercase tracking-wide">{new Date(b.geplant_von).toLocaleDateString('de-DE', { month: 'short' })}</span>
+                              <span className="text-xl font-bold leading-none">{new Date(b.geplant_von).getDate()}</span>
                             </div>
-                            <div className="flex-grow">
-                              <div className="flex items-center gap-3 mb-1">
-                                <h3 className="font-bold text-slate-900">{Array.isArray(b.dienstleistungen) ? b.dienstleistungen[0]?.name : b.dienstleistungen?.name || 'Termin'}</h3>
+                            <div className="flex-grow min-w-0">
+                              <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                                <h3 className="font-bold text-slate-900 text-base">{serviceName}</h3>
                                 {statusBadge(b.status)}
                               </div>
                               <p className="text-slate-600 text-sm">
                                 {new Date(b.geplant_von).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                                {' • '}{formatTime(b.geplant_von)} – {formatTime(b.geplant_bis)}
                               </p>
-                              {b.hinweise && <p className="text-sm text-slate-500 mt-1">Hinweise: {b.hinweise}</p>}
+                              <p className="text-slate-700 text-sm font-medium mt-0.5">
+                                🕐 {formatTime(b.geplant_von)} – {formatTime(b.geplant_bis)} Uhr
+                              </p>
+                              {techName && (
+                                <p className="text-slate-500 text-xs mt-1">👤 Techniker: {techName}</p>
+                              )}
+                              {b.hinweise && <p className="text-sm text-slate-400 mt-2 italic">💬 {b.hinweise}</p>}
                             </div>
                           </div>
                         </div>

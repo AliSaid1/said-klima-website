@@ -7,8 +7,10 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
+import { COMPANY_NAME } from '@/lib/branding';
+
 export const metadata: Metadata = {
-  title: 'Said Kälte- und Klimatechnik',
+  title: COMPANY_NAME,
   description: 'Ihr Experte für Kälte- und Klimatechnik. Shop und Service-Buchung.',
 };
 

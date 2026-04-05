@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Search, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Search, Download, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import StatusBadge from '@/components/admin/StatusBadge';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
@@ -13,6 +13,8 @@ interface Bestellung {
   status: string;
   gesamt_brutto: number;
   erstellt_am: string;
+  gast_email: string | null;
+  rechnungsadresse_json: { name?: string; email?: string; phone?: string } | null;
   benutzer: { vorname: string; nachname: string; email: string } | null;
 }
 
@@ -62,8 +64,8 @@ export default function OrdersListPage() {
 
     const csvData = orders.map((o) => ({
       Bestellnummer: o.bestellnummer,
-      Kunde: o.benutzer ? `${o.benutzer.vorname} ${o.benutzer.nachname}` : '—',
-      Email: o.benutzer?.email || '—',
+      Kunde: o.benutzer ? `${o.benutzer.vorname} ${o.benutzer.nachname}` : (o.rechnungsadresse_json?.name || 'Gast'),
+      Email: o.benutzer?.email || o.gast_email || '—',
       Status: o.status,
       Gesamt: Number(o.gesamt_brutto).toFixed(2),
       Datum: new Date(o.erstellt_am).toLocaleDateString('de-DE'),
@@ -78,6 +80,22 @@ export default function OrdersListPage() {
     link.click();
     URL.revokeObjectURL(url);
     toast.success('CSV exportiert');
+  };
+
+  const handleDeleteOrder = async (orderId: string, bestellnummer: string) => {
+    if (!confirm(`Offene Bestellung #${bestellnummer} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) return;
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+        toast.success(`Bestellung #${bestellnummer} gelöscht`);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        toast.error(json.error || 'Fehler beim Löschen');
+      }
+    } catch {
+      toast.error('Fehler beim Löschen');
+    }
   };
 
   return (
@@ -116,10 +134,12 @@ export default function OrdersListPage() {
         >
           <option value="">Alle Status</option>
           <option value="offen">Offen</option>
+          <option value="warten_auf_zahlung">Warten auf Zahlung</option>
           <option value="bezahlt">Bezahlt</option>
           <option value="versandt">Versandt</option>
           <option value="abgeschlossen">Abgeschlossen</option>
           <option value="storniert">Storniert</option>
+          <option value="fehlgeschlagen">Fehlgeschlagen</option>
           <option value="erstattet">Erstattet</option>
         </select>
       </div>
@@ -146,6 +166,7 @@ export default function OrdersListPage() {
                     <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Datum</th>
                     <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Gesamt</th>
                     <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase w-16"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -157,9 +178,16 @@ export default function OrdersListPage() {
                         </Link>
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-900">
-                        {order.benutzer ? `${order.benutzer.vorname} ${order.benutzer.nachname}` : '—'}
-                        {order.benutzer && (
-                          <p className="text-xs text-slate-500">{order.benutzer.email}</p>
+                        {order.benutzer ? (
+                          <>
+                            {order.benutzer.vorname} {order.benutzer.nachname}
+                            <p className="text-xs text-slate-500">{order.benutzer.email}</p>
+                          </>
+                        ) : (
+                          <>
+                            {order.rechnungsadresse_json?.name || 'Gast'}
+                            <p className="text-xs text-slate-500">{order.gast_email || order.rechnungsadresse_json?.email || '—'}</p>
+                          </>
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm text-slate-600">
@@ -170,6 +198,17 @@ export default function OrdersListPage() {
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={order.status} />
+                      </td>
+                      <td className="px-6 py-4">
+                        {order.status === 'offen' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id, order.bestellnummer); }}
+                            title="Offene Bestellung löschen"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

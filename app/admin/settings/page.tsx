@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Building2, Save, Loader2, Palette } from 'lucide-react';
+import { Building2, Save, Loader2, Palette, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface OeffnungsTag {
@@ -28,6 +28,8 @@ interface SettingsData {
   primaerfarbe: string;
   sekundaerfarbe: string;
   akzentfarbe: string;
+  versandkosten: number;
+  versandkostenlos_ab: number;
 }
 
 export default function SettingsPage() {
@@ -52,6 +54,8 @@ export default function SettingsPage() {
             telefon: d.telefon || '',
             ust_id: d.ust_id || '',
             adresse_json: d.adresse_json || {},
+            versandkosten: d.versandkosten ?? 5,
+            versandkostenlos_ab: d.versandkostenlos_ab ?? 500,
           });
           setOeffnungszeiten(d.oeffnungszeiten || []);
           setColors({
@@ -258,6 +262,63 @@ export default function SettingsPage() {
                 Akzent-Link →
               </span>
             </div>
+          </div>
+        </div>
+
+        {/* Versandkosten */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <Truck className="w-5 h-5 text-blue-600" />
+            <div>
+              <h2 className="text-lg font-outfit font-bold text-slate-900">Versandkosten</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Diese Werte gelten automatisch im Warenkorb und beim Checkout.
+              </p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Versandkosten (€)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('versandkosten', { valueAsNumber: true })}
+                  className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="5.00"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">€</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Pauschale Versandkosten pro Bestellung</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Kostenloser Versand ab (€)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  {...register('versandkostenlos_ab', { valueAsNumber: true })}
+                  className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                  placeholder="500.00"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">€</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">Bestellwert ab dem der Versand gratis ist</p>
+            </div>
+          </div>
+          {/* Live preview */}
+          <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600">
+            <p className="font-medium text-slate-800 mb-1">Vorschau</p>
+            <p>Bestellungen unter dem Schwellenwert: <strong>Versand wird berechnet</strong></p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Änderungen werden sofort im Warenkorb und beim Checkout sichtbar.
+            </p>
           </div>
         </div>
 

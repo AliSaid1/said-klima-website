@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { CalendarDays, Download, List } from 'lucide-react';
+import { CalendarDays, Download, List, Loader2, RefreshCw } from 'lucide-react';
 import StatusBadge from '@/components/admin/StatusBadge';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
@@ -21,6 +21,10 @@ interface BuchungEvent {
   status: string;
   dienstleistung: string;
   kunde: string;
+  kundeEmail: string;
+  kundeTelefon: string;
+  techniker: string;
+  hinweise: string;
   raw: Record<string, unknown>;
 }
 
@@ -32,6 +36,14 @@ const statusColorMap: Record<string, string> = {
   nicht_erschienen: '#94A3B8',
 };
 
+const statusLabelMap: Record<string, string> = {
+  ausstehend: 'Ausstehend',
+  bestaetigt: 'Bestätigt',
+  abgeschlossen: 'Abgeschlossen',
+  abgesagt: 'Abgesagt',
+  nicht_erschienen: 'Nicht erschienen',
+};
+
 export default function BookingsPage() {
   const [events, setEvents] = useState<BuchungEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,32 +52,81 @@ export default function BookingsPage() {
   const [date, setDate] = useState(new Date());
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<BuchungEvent | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadBookings = () => {
+    setLoading(true);
     fetch('/api/bookings')
       .then((r) => r.json())
       .then((json) => {
-        if (!mounted) return;
         const mapped = (json.data || []).map((b: Record<string, unknown>) => {
           const dl = b.dienstleistungen as Record<string, string> | null;
           const benutzer = b.benutzer as Record<string, string> | null;
+          const tech = b.techniker as Record<string, string> | null;
+
+          // Resolve customer name: benutzer > kontakt_name > hinweise fallback
+          let kunde = '—';
+          if (benutzer?.vorname) {
+            kunde = `${benutzer.vorname} ${benutzer.nachname}`;
+          } else if (b.kontakt_name) {
+            kunde = b.kontakt_name as string;
+          }
+
+          // Service name(s)
+          let dienstleistung = dl?.name || '—';
+          const bdList = b.buchung_dienstleistungen as Array<{ dienstleistungen: { name: string } }> | null;
+          if (bdList && bdList.length > 0) {
+            dienstleistung = bdList.map(bd => bd.dienstleistungen?.name).filter(Boolean).join(', ') || dienstleistung;
+          }
+
           return {
             id: b.id as string,
-            title: dl?.name || 'Termin',
+            title: dienstleistung || 'Termin',
             start: new Date(b.geplant_von as string),
             end: new Date(b.geplant_bis as string),
             status: b.status as string,
-            dienstleistung: dl?.name || '—',
-            kunde: benutzer ? `${benutzer.vorname} ${benutzer.nachname}` : '—',
+            dienstleistung,
+            kunde,
+            kundeEmail: (benutzer?.email || b.kontakt_email || '') as string,
+            kundeTelefon: (benutzer?.telefonnummer || b.kontakt_telefon || '') as string,
+            techniker: tech ? `${tech.vorname} ${tech.nachname}` : '—',
+            hinweise: (b.hinweise || '') as string,
             raw: b,
           };
         });
         setEvents(mapped);
         setLoading(false);
       });
-    return () => { mounted = false; };
+  };
+
+  useEffect(() => {
+    loadBookings();
   }, []);
+
+  const handleStatusChange = async (eventId: string, newStatus: string) => {
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/bookings/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        toast.success(`Status auf "${statusLabelMap[newStatus] || newStatus}" geändert`);
+        // Update local state
+        setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, status: newStatus } : e));
+        if (selectedEvent?.id === eventId) {
+          setSelectedEvent({ ...selectedEvent, status: newStatus });
+        }
+      } else {
+        toast.error(json.error || 'Fehler beim Statuswechsel');
+      }
+    } catch {
+      toast.error('Verbindungsfehler');
+    }
+    setUpdatingStatus(false);
+  };
 
   const filteredEvents = useMemo(() => {
     if (!statusFilter) return events;
@@ -139,6 +200,9 @@ export default function BookingsPage() {
           <button onClick={exportCSV} className="px-4 py-2 text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700">
             <Download className="w-4 h-4" />
           </button>
+          <button onClick={loadBookings} className="px-4 py-2 text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700" title="Aktualisieren">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
@@ -182,6 +246,7 @@ export default function BookingsPage() {
                 <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Zeit</th>
                 <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Dienstleistung</th>
                 <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Kunde</th>
+                <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Techniker</th>
                 <th className="px-6 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">Status</th>
               </tr>
             </thead>
@@ -192,6 +257,7 @@ export default function BookingsPage() {
                   <td className="px-6 py-4 text-sm text-slate-600">{format(event.start, 'HH:mm')} – {format(event.end, 'HH:mm')}</td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{event.dienstleistung}</td>
                   <td className="px-6 py-4 text-sm text-slate-600">{event.kunde}</td>
+                  <td className="px-6 py-4 text-sm text-slate-600">{event.techniker}</td>
                   <td className="px-6 py-4"><StatusBadge status={event.status} /></td>
                 </tr>
               ))}
@@ -203,11 +269,12 @@ export default function BookingsPage() {
       {/* Event Detail Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedEvent(null)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
               <h3 className="font-outfit font-bold text-slate-900 text-lg">{selectedEvent.dienstleistung}</h3>
               <StatusBadge status={selectedEvent.status} />
             </div>
+
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-500">Datum</span>
@@ -221,10 +288,60 @@ export default function BookingsPage() {
                 <span className="text-slate-500">Kunde</span>
                 <span className="text-slate-900 font-medium">{selectedEvent.kunde}</span>
               </div>
+              {selectedEvent.kundeEmail && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">E-Mail</span>
+                  <a href={`mailto:${selectedEvent.kundeEmail}`} className="text-blue-600 font-medium hover:underline">{selectedEvent.kundeEmail}</a>
+                </div>
+              )}
+              {selectedEvent.kundeTelefon && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Telefon</span>
+                  <a href={`tel:${selectedEvent.kundeTelefon}`} className="text-blue-600 font-medium hover:underline">{selectedEvent.kundeTelefon}</a>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-slate-500">Techniker</span>
+                <span className="text-slate-900 font-medium">{selectedEvent.techniker}</span>
+              </div>
+              {selectedEvent.hinweise && (
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-slate-500 text-xs font-medium uppercase tracking-wider">Hinweise</span>
+                  <p className="text-slate-700 mt-1 whitespace-pre-line">{selectedEvent.hinweise}</p>
+                </div>
+              )}
             </div>
+
+            {/* ── Status Change Section ── */}
+            <div className="mt-6 pt-5 border-t border-slate-200">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Status ändern</label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedEvent.status}
+                  onChange={(e) => handleStatusChange(selectedEvent.id, e.target.value)}
+                  disabled={updatingStatus}
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50"
+                >
+                  <option value="ausstehend">⏳ Ausstehend</option>
+                  <option value="bestaetigt">✅ Bestätigt</option>
+                  <option value="abgeschlossen">🏁 Abgeschlossen</option>
+                  <option value="abgesagt">❌ Abgesagt</option>
+                  <option value="nicht_erschienen">⚠️ Nicht erschienen</option>
+                </select>
+                {updatingStatus && (
+                  <div className="flex items-center px-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                Der Kunde wird per E-Mail über die Statusänderung informiert.
+              </p>
+            </div>
+
             <button
               onClick={() => setSelectedEvent(null)}
-              className="w-full mt-6 py-2.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors"
+              className="w-full mt-5 py-2.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-200 transition-colors"
             >
               Schließen
             </button>

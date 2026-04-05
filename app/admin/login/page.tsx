@@ -1,7 +1,8 @@
-'use client';
+ 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import { LOGO_SRC, COMPANY_NAME } from '@/lib/branding';
 import { createClient } from '@/lib/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,7 +17,6 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -28,20 +28,28 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
 
-    if (authError) {
-      setError('E-Mail oder Passwort ist falsch.');
+      if (authError) {
+        setError('E-Mail oder Passwort ist falsch.');
+        setLoading(false);
+        return;
+      }
+
+      // Full-page navigation so middleware and the admin layout both start
+      // fresh with the newly-set session cookie. Using router.push() +
+      // router.refresh() can conflict and leave the loading spinner stuck.
+      window.location.assign('/admin');
+    } catch (err) {
+      console.error('[admin login] unexpected error:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
       setLoading(false);
-      return;
     }
-
-    router.push('/admin');
-    router.refresh();
   };
 
   return (
@@ -49,8 +57,8 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl leading-none">S</span>
+          <div className="relative w-72 h-36 mx-auto mb-6">
+            <Image src={LOGO_SRC} alt={COMPANY_NAME} fill className="object-contain" priority />
           </div>
           <h1 className="text-2xl font-outfit font-bold text-slate-900">Admin Dashboard</h1>
           <p className="text-slate-500 mt-1">Melden Sie sich an, um fortzufahren</p>
@@ -117,7 +125,7 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="text-center text-sm text-slate-400 mt-6">
-          &copy; {new Date().getFullYear()} Said Kälte- und Klimatechnik
+          &copy; {new Date().getFullYear()} {COMPANY_NAME}
         </p>
       </div>
     </div>

@@ -6,10 +6,12 @@ interface StatusBadgeProps {
 const statusColors: Record<string, string> = {
   // Bestellungen
   offen: 'bg-yellow-100 text-yellow-800',
+  warten_auf_zahlung: 'bg-amber-100 text-amber-800',
   bezahlt: 'bg-blue-100 text-blue-800',
   versandt: 'bg-purple-100 text-purple-800',
   abgeschlossen: 'bg-green-100 text-green-800',
   storniert: 'bg-red-100 text-red-800',
+  fehlgeschlagen: 'bg-red-100 text-red-800',
   erstattet: 'bg-slate-100 text-slate-800',
   // Buchungen
   ausstehend: 'bg-yellow-100 text-yellow-800',
@@ -27,10 +29,12 @@ const statusColors: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   offen: 'Offen',
+  warten_auf_zahlung: 'Warten auf Zahlung',
   bezahlt: 'Bezahlt',
   versandt: 'Versandt',
   abgeschlossen: 'Abgeschlossen',
   storniert: 'Storniert',
+  fehlgeschlagen: 'Fehlgeschlagen',
   erstattet: 'Erstattet',
   ausstehend: 'Ausstehend',
   bestaetigt: 'Bestätigt',

@@ -120,9 +120,6 @@ export default function RegisterPage() {
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl leading-none">S</span>
-          </div>
           <h1 className="text-2xl font-outfit font-bold text-slate-900">Konto erstellen</h1>
           <p className="text-slate-500 mt-2">Registrieren Sie sich für ein kostenloses Kundenkonto</p>
         </div>

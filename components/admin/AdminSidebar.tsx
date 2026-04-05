@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -18,6 +19,8 @@ import {
   Users,
   Settings,
 } from 'lucide-react';
+import Image from 'next/image';
+import { LOGO_SRC, COMPANY_NAME } from '@/lib/branding';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -38,7 +41,7 @@ interface AdminSidebarProps {
   onClose: () => void;
 }
 
-export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
+function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -72,14 +75,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       >
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-slate-100">
-          <Link href="/admin" className="flex items-center gap-2.5" onClick={onClose}>
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-lg leading-none">S</span>
+          <Link href="/admin" className="flex items-center gap-2.5 h-full" onClick={onClose}>
+            <div className="relative w-32 h-10 flex-shrink-0 flex items-center">
+              <Image src={LOGO_SRC} alt={COMPANY_NAME} fill className="object-contain object-left" />
             </div>
-            <span className="font-outfit font-bold text-sm text-slate-900 leading-tight">
-              Said Klima<br />
-              <span className="text-[10px] font-normal text-slate-400">Admin Dashboard</span>
-            </span>
           </Link>
           <button
             onClick={onClose}
@@ -130,3 +129,4 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   );
 }
 
+export default memo(AdminSidebar);

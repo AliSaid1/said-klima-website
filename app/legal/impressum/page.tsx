@@ -1,46 +1,37 @@
-export default function ImpressumPage() {
+import { createClient } from '@/lib/supabase/server';
+
+export default async function ImpressumPage() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('rechtstexte')
+    .select('titel, content_html, aktualisiert_am, veröffentlicht')
+    .eq('slug', 'impressum')
+    .single();
+
+  if (error || !data) {
+    return (
+      <div>
+        <h1>Impressum</h1>
+        <p className="text-slate-600">Das Impressum konnte nicht geladen werden.</p>
+      </div>
+    );
+  }
+
+  const page = data as any;
+  const published = page.published ?? page['veröffentlicht'];
+  if (!published) {
+    return (
+      <div>
+        <h1>{page.titel || 'Impressum'}</h1>
+        <p className="text-slate-600">Diese Seite ist derzeit nicht veröffentlicht.</p>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <h1>Impressum</h1>
-      
-      <h2>Angaben gemäß § 5 TMG</h2>
-      <p>
-        Said Kälte- und Klimatechnik GmbH<br />
-        Musterstraße 123<br />
-        10115 Berlin
-      </p>
-
-      <h2>Vertreten durch:</h2>
-      <p>Geschäftsführer: Herr Said Mustermann</p>
-
-      <h2>Kontakt</h2>
-      <p>
-        Telefon: 0800 123 4567<br />
-        E-Mail: info@said-klima.de
-      </p>
-
-      <h2>Registereintrag</h2>
-      <p>
-        Eintragung im Handelsregister.<br />
-        Registergericht: Amtsgericht Berlin (Charlottenburg)<br />
-        Registernummer: HRB 123456
-      </p>
-
-      <h2>Umsatzsteuer-ID</h2>
-      <p>
-        Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:<br />
-        DE 123 456 789
-      </p>
-
-      <h2>Streitschlichtung</h2>
-      <p>
-        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: 
-        <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr</a>.<br />
-        Unsere E-Mail-Adresse finden Sie oben im Impressum.
-      </p>
-      <p>
-        Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
-      </p>
-    </>
+    <div>
+      <h1 className="sr-only">{page.titel || 'Impressum'}</h1>
+      <div className="rte-content" dangerouslySetInnerHTML={{ __html: page.content_html || '' }} />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminTopbar from '@/components/admin/AdminTopbar';
@@ -11,24 +11,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
+    // Don't run the admin auth check on the login page itself
+    if (pathname === '/admin/login') return;
+
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) {
-        router.push('/admin/login');
-      } else {
+    supabase.auth.getUser()
+      .then(async ({ data: { user } }) => {
+        if (!user) {
+          router.push('/admin/login');
+          return;
+        }
+
+        // Check admin role
+        const { data: benutzer } = await supabase
+          .from('benutzer')
+          .select('rolle')
+          .eq('id', user.id)
+          .single();
+
+        if (benutzer?.rolle !== 'admin') {
+          router.push('/');
+          return;
+        }
+
         setUserEmail(user.email ?? undefined);
-      }
-      setLoading(false);
-    });
-  }, [router]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('[admin layout] auth check failed:', err);
+        setAuthError('Authentifizierung fehlgeschlagen. Bitte neu anmelden.');
+        setLoading(false);
+      });
+  }, [router, pathname]);
+
+  // If we are on the admin login page, render a minimal layout so the
+  // Login page isn't wrapped by the full admin UI and we don't show the
+  // loading spinner when not authenticated.
+  if (pathname === '/admin/login') {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
+        {children}
+      </div>
+    );
+  }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center gap-4">
+        <p className="text-red-600 font-medium">{authError}</p>
+        <a href="/admin/login" className="text-blue-600 underline text-sm">Zurück zur Anmeldung</a>
       </div>
     );
   }

@@ -17,8 +17,13 @@ const typLabels: Record<string, string> = {
   buchung_bestaetigung: 'Buchung: Bestätigung',
   buchung_erinnerung: 'Buchung: Erinnerung',
   buchung_absage: 'Buchung: Absage',
+  bestellung_eingegangen: 'Bestellung: Eingegangen (Banküberweisung)',
   bestellung_bestaetigung: 'Bestellung: Bestätigung',
   bestellung_status: 'Bestellung: Status-Update',
+  bestellung_admin_benachrichtigung: 'Bestellung: Admin-Benachrichtigung',
+  zahlung_fehlgeschlagen: 'Bestellung: Zahlung fehlgeschlagen',
+  kontakt_anfrage_intern: 'Kontakt: Interne Benachrichtigung',
+  kontakt_anfrage_bestaetigung: 'Kontakt: Kundenbestätigung',
 };
 
 export default function EmailTemplatesPage() {

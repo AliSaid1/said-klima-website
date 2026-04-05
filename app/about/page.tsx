@@ -1,10 +1,10 @@
 import Image from 'next/image';
+import { COMPANY_NAME } from '@/lib/branding';
 import { Shield, Users, Award, Clock } from 'lucide-react';
 
 export default function AboutPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24">
-      
       {/* Hero Section */}
       <div className="grid lg:grid-cols-2 gap-12 items-center mb-24">
         <div>
@@ -12,16 +12,16 @@ export default function AboutPage() {
             Ihr Experte für perfektes Klima seit über 15 Jahren
           </h1>
           <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-            Said Kälte- und Klimatechnik steht für höchste Qualität, Zuverlässigkeit und exzellenten Kundenservice. Wir sind Ihr regionaler Partner für moderne, energieeffiziente Klimalösungen in Privathaushalten und Gewerbebetrieben.
+            {COMPANY_NAME} steht für höchste Qualität, Zuverlässigkeit und exzellenten Kundenservice. Wir sind Ihr regionaler Partner für moderne, energieeffiziente Klimalösungen in Privathaushalten und Gewerbebetrieben.
           </p>
           <p className="text-lg text-slate-600 leading-relaxed">
             Unser Team aus zertifizierten Kälteanlagenbauern bildet sich ständig weiter, um Ihnen stets die innovativsten und umweltfreundlichsten Technologien anbieten zu können.
           </p>
         </div>
-        <div className="relative h-[400px] sm:h-[500px] rounded-3xl overflow-hidden shadow-2xl">
+        <div className="relative h-[500px] sm:h-[400px] rounded-3xl overflow-hidden shadow-2xl">
           <Image
-            src="/images/installation.avif"
-            alt="Techniker bei der Arbeit"
+            src="/images/KKS_LOGO.png"
+            alt="KKS Logo"
             fill
             className="object-cover"
           />

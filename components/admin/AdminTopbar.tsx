@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Menu } from 'lucide-react';
 
 interface AdminTopbarProps {
@@ -8,7 +9,7 @@ interface AdminTopbarProps {
   userEmail?: string;
 }
 
-export default function AdminTopbar({ onMenuClick, title, userEmail }: AdminTopbarProps) {
+function AdminTopbar({ onMenuClick, title, userEmail }: AdminTopbarProps) {
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
       <div className="flex items-center gap-4">
@@ -39,3 +40,4 @@ export default function AdminTopbar({ onMenuClick, title, userEmail }: AdminTopb
   );
 }
 
+export default memo(AdminTopbar);

@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TiptapLink from '@tiptap/extension-link';
-import TiptapImage from '@tiptap/extension-image';
-import Placeholder from '@tiptap/extension-placeholder';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { ArrowLeft, Save, Loader2, Bold, Italic, Heading2, Heading3, List, ListOrdered, LinkIcon, ImageIcon, Undo, Redo, Clock } from 'lucide-react';
+
+const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
+import { ArrowLeft, Save, Loader2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Version {
@@ -26,20 +24,7 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
   const [versions, setVersions] = useState<Version[]>([]);
   const [showVersions, setShowVersions] = useState(false);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit,
-      TiptapLink.configure({ openOnClick: false }),
-      TiptapImage,
-      Placeholder.configure({ placeholder: 'Seiteninhalt hier eingeben...' }),
-    ],
-    editorProps: {
-      attributes: {
-        class: 'prose prose-slate max-w-none min-h-[400px] p-6 focus:outline-none',
-      },
-    },
-  });
+  const [editorValue, setEditorValue] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -49,19 +34,22 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
         if (!mounted) return;
         if (json.data) {
           setTitel(json.data.titel);
-          setPublished(json.data['veröffentlicht']);
-          if (editor && json.data.content_html) {
-            editor.commands.setContent(json.data.content_html);
+          // Accept either the database column name (veröffentlicht) or the
+          // more portable 'published' property if present. Use safe any cast
+          // to avoid non-ASCII property warnings.
+          // API normalizes and returns a portable 'published' boolean
+          setPublished(json.data.published ?? false);
+          if (json.data.content_html) {
+            setEditorValue(json.data.content_html);
           }
         }
         setVersions(json.versions || []);
         setLoading(false);
       });
     return () => { mounted = false; };
-  }, [slug, editor]);
+  }, [slug]);
 
   const handleSave = async () => {
-    if (!editor) return;
     setSaving(true);
 
     const res = await fetch(`/api/content/${slug}`, {
@@ -69,8 +57,10 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         titel,
-        content_html: editor.getHTML(),
-        'veröffentlicht': published,
+        content_html: editorValue,
+        // Send a portable ASCII key; the server will map this to the
+        // database column named 'veröffentlicht'.
+        published: published,
       }),
     });
 
@@ -80,34 +70,27 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
       const refreshed = await fetch(`/api/content/${slug}`).then((r) => r.json());
       setVersions(refreshed.versions || []);
     } else {
-      toast.error('Fehler beim Speichern');
+      // Try to extract server error message for clearer debugging
+      let msg = 'Fehler beim Speichern';
+      try {
+        const err = await res.json();
+        if (err?.error) msg = err.error;
+        else if (err?.message) msg = err.message;
+      } catch {}
+      toast.error(msg);
+      console.error('Save failed', res.status, await res.text());
     }
     setSaving(false);
   };
 
   const restoreVersion = (version: Version) => {
-    if (!editor) return;
     if (!confirm(`Version ${version.version_nummer} wiederherstellen? Aktuelle Änderungen gehen verloren.`)) return;
-    editor.commands.setContent(version.content_html);
+    setEditorValue(version.content_html);
     toast.info(`Version ${version.version_nummer} geladen — noch nicht gespeichert`);
     setShowVersions(false);
   };
 
-  const addLink = () => {
-    if (!editor) return;
-    const url = prompt('URL eingeben:');
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
-    }
-  };
-
-  const addImage = () => {
-    if (!editor) return;
-    const url = prompt('Bild-URL eingeben:');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
-  };
+  // link/image helpers removed — use the editor toolbar or paste instead
 
   if (loading) {
     return (
@@ -165,47 +148,9 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
       <div className="flex gap-6">
         {/* Editor */}
         <div className="flex-1">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            {/* Toolbar */}
-            {editor && (
-              <div className="flex flex-wrap items-center gap-1 px-4 py-2 border-b border-slate-200 bg-slate-50">
-                <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={`p-1.5 rounded ${editor.isActive('bold') ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <Bold className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={`p-1.5 rounded ${editor.isActive('italic') ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <Italic className="w-4 h-4" />
-                </button>
-                <div className="w-px h-5 bg-slate-300 mx-1" />
-                <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={`p-1.5 rounded ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <Heading2 className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={`p-1.5 rounded ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <Heading3 className="w-4 h-4" />
-                </button>
-                <div className="w-px h-5 bg-slate-300 mx-1" />
-                <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={`p-1.5 rounded ${editor.isActive('bulletList') ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <List className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`p-1.5 rounded ${editor.isActive('orderedList') ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200'}`}>
-                  <ListOrdered className="w-4 h-4" />
-                </button>
-                <div className="w-px h-5 bg-slate-300 mx-1" />
-                <button type="button" onClick={addLink} className="p-1.5 rounded text-slate-500 hover:bg-slate-200">
-                  <LinkIcon className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={addImage} className="p-1.5 rounded text-slate-500 hover:bg-slate-200">
-                  <ImageIcon className="w-4 h-4" />
-                </button>
-                <div className="w-px h-5 bg-slate-300 mx-1" />
-                <button type="button" onClick={() => editor.chain().focus().undo().run()} className="p-1.5 rounded text-slate-500 hover:bg-slate-200">
-                  <Undo className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => editor.chain().focus().redo().run()} className="p-1.5 rounded text-slate-500 hover:bg-slate-200">
-                  <Redo className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            <EditorContent editor={editor} />
+          <div className="flex-1">
+            {/* Shared Rich Text Editor component */}
+            <RichTextEditor value={editorValue} onChange={(html) => setEditorValue(html)} minHeight="500px" />
           </div>
         </div>
 

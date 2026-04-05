@@ -1,9 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 
 export interface CartItem {
   artikel_id: string;
+  variant_id?: string;
+  slug?: string;
   titel: string;
   artikelnummer: string;
   preis_brutto: number;
@@ -16,10 +18,10 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'menge'>) => void;
-  removeItem: (artikel_id: string) => void;
-  updateQuantity: (artikel_id: string, menge: number) => void;
-  toggleInstallation: (artikel_id: string, mit_installation: boolean, dienstleistung_id?: string) => void;
+  addItem: (item: Omit<CartItem, 'menge'> & { menge?: number }) => void;
+  removeItem: (artikel_id: string, variant_id?: string) => void;
+  updateQuantity: (artikel_id: string, menge: number, variant_id?: string) => void;
+  toggleInstallation: (artikel_id: string, mit_installation: boolean, dienstleistung_id?: string, variant_id?: string) => void;
   clearCart: () => void;
   itemCount: number;
   total: number;
@@ -27,59 +29,87 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_KEY = 'said-klima-cart';
+const CART_KEY = 'kks-cart';
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window === 'undefined') return [];
+  // Read localStorage once to seed the initial state, but defer it to avoid
+  // a server/client mismatch.  The first render always uses [].
+  const hydratedRef = useRef(false);
+
+  const [items, setItems] = useState<CartItem[]>([]);
+
+  // Hydrate from localStorage after the first client render
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
     try {
       const stored = localStorage.getItem(CART_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+      if (stored) {
+        const parsed: CartItem[] = JSON.parse(stored);
+        if (parsed.length) setItems(parsed); // eslint-disable-line react-hooks/set-state-in-effect
+      }
+    } catch { /* ignore corrupt data */ }
+  }, []);
 
-  // Persist to localStorage
+  // Persist to localStorage (skip the very first render which is still [])
   useEffect(() => {
+    if (!hydratedRef.current) return;
     localStorage.setItem(CART_KEY, JSON.stringify(items));
   }, [items]);
 
-  const addItem = useCallback((item: Omit<CartItem, 'menge'>) => {
+  const addItem = useCallback((item: Omit<CartItem, 'menge'> & { menge?: number }) => {
+    const qty = Math.max(1, item.menge ?? 1);
+    // Strip the optional menge key before spreading so the CartItem shape stays clean.
+    const { menge: _qty, ...rest } = item as any;
     setItems((prev) => {
-      const existing = prev.find((i) => i.artikel_id === item.artikel_id);
+      // Key on BOTH artikel_id and variant_id — different variants must be separate cart entries
+      const existing = prev.find(
+        (i) => i.artikel_id === rest.artikel_id && i.variant_id === rest.variant_id,
+      );
       if (existing) {
         return prev.map((i) =>
-          i.artikel_id === item.artikel_id ? { ...i, menge: i.menge + 1 } : i
+          i.artikel_id === rest.artikel_id && i.variant_id === rest.variant_id
+            ? { ...i, menge: i.menge + qty }
+            : i
         );
       }
-      return [...prev, { ...item, menge: 1 }];
+      return [...prev, { ...rest, menge: qty }];
     });
   }, []);
 
-  const removeItem = useCallback((artikel_id: string) => {
-    setItems((prev) => prev.filter((i) => i.artikel_id !== artikel_id));
+  const removeItem = useCallback((artikel_id: string, variant_id?: string) => {
+    setItems((prev) =>
+      prev.filter((i) => !(i.artikel_id === artikel_id && i.variant_id === variant_id))
+    );
   }, []);
 
-  const updateQuantity = useCallback((artikel_id: string, menge: number) => {
+  const updateQuantity = useCallback((artikel_id: string, menge: number, variant_id?: string) => {
     if (menge <= 0) {
-      setItems((prev) => prev.filter((i) => i.artikel_id !== artikel_id));
+      setItems((prev) =>
+        prev.filter((i) => !(i.artikel_id === artikel_id && i.variant_id === variant_id))
+      );
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.artikel_id === artikel_id ? { ...i, menge } : i))
-    );
-  }, []);
-
-  const toggleInstallation = useCallback((artikel_id: string, mit_installation: boolean, dienstleistung_id?: string) => {
-    setItems((prev) =>
       prev.map((i) =>
-        i.artikel_id === artikel_id
-          ? { ...i, mit_installation, dienstleistung_id: dienstleistung_id || null }
-          : i
+        i.artikel_id === artikel_id && i.variant_id === variant_id ? { ...i, menge } : i
       )
     );
   }, []);
+
+  const toggleInstallation = useCallback(
+    (artikel_id: string, mit_installation: boolean, dienstleistung_id?: string, variant_id?: string) => {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.artikel_id === artikel_id && i.variant_id === variant_id
+            ? { ...i, mit_installation, dienstleistung_id: dienstleistung_id || null }
+            : i
+        )
+      );
+    },
+    [],
+  );
 
   const clearCart = useCallback(() => {
     setItems([]);

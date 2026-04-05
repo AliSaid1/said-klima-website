@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { updateFirmeneinstellungenSchema } from '@/lib/validators/firmeneinstellungen';
 
 // GET /api/settings — Fetch company settings (singleton)
 export async function GET() {
-  const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('firmeneinstellungen')
     .select('*')
     .limit(1)
@@ -21,8 +22,8 @@ export async function GET() {
 
 // PUT /api/settings — Update company settings
 export async function PUT(request: NextRequest) {
+  // Authenticate via the user session (anon client)
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 401 });
@@ -32,11 +33,19 @@ export async function PUT(request: NextRequest) {
   const parsed = updateFirmeneinstellungenSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    const flat = parsed.error.flatten();
+    const messages = [
+      ...flat.formErrors,
+      ...Object.entries(flat.fieldErrors).map(([field, errs]) => `${field}: ${(errs as string[]).join(', ')}`),
+    ].join('; ');
+    return NextResponse.json({ error: messages || 'Validierungsfehler' }, { status: 400 });
   }
 
+  // Use service-role client for DB writes to bypass RLS
+  const admin = createAdminClient();
+
   // Get existing settings row ID
-  const { data: existing } = await supabase
+  const { data: existing } = await admin
     .from('firmeneinstellungen')
     .select('id')
     .limit(1)
@@ -44,7 +53,7 @@ export async function PUT(request: NextRequest) {
 
   if (!existing) {
     // Create if doesn't exist
-    const { data, error } = await supabase
+    const { data, error } = await admin
       .from('firmeneinstellungen')
       .insert(parsed.data)
       .select()
@@ -57,7 +66,7 @@ export async function PUT(request: NextRequest) {
   }
 
   // Update existing
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('firmeneinstellungen')
     .update(parsed.data)
     .eq('id', existing.id)

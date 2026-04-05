@@ -29,6 +29,9 @@ export const updateFirmeneinstellungenSchema = z.object({
   sekundaerfarbe: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Ungültiger Hex-Farbcode').optional(),
   akzentfarbe: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Ungültiger Hex-Farbcode').optional(),
   logo_datei_id: z.string().uuid().nullable().optional(),
+  // Dynamic shipping cost settings
+  versandkosten:       z.number().min(0, 'Versandkosten dürfen nicht negativ sein').optional(),
+  versandkostenlos_ab: z.number().min(0, 'Schwellenwert darf nicht negativ sein').optional(),
 });
 
 export type UpdateFirmeneinstellungenInput = z.infer<typeof updateFirmeneinstellungenSchema>;
@@ -61,6 +64,8 @@ export interface Firmeneinstellungen {
   primaerfarbe: string;
   sekundaerfarbe: string;
   akzentfarbe: string;
+  versandkosten: number;
+  versandkostenlos_ab: number;
   erstellt_am: string;
   aktualisiert_am: string;
 }
