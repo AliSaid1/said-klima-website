@@ -1,14 +1,15 @@
 # Project Documentation
 
-This `docs/` folder aggregates important project documentation from the repository root and `_archive/docs` so they are easier to find.
-
-See `INDEX.md` for a linked index of the documents.
+Engineering and process documentation for the platform. **New here? Start with the
+[project README](../README.md)**, then use **[`INDEX.md`](INDEX.md)** for a linked map of
+every document.
 
 Structure:
 
-- security/ — security-related reports
-- plans/ — refactoring and planning artifacts
-- archive/ — historic docs copied from `_archive/docs`
-
-If you want originals removed from their original locations, perform that operation manually after reviewing the copies.
+- `DB_STRUCTURE.md` — database schema & data model (source of truth)
+- `STRIPE_SKILLS.md` — scoped Stripe domain rules
+- `security/` — security audit & reports
+- `plans/` — feature design docs / RFCs and refactoring plans
+- `screenshots/` — images used by the project README
+- `archive/` — historic AI-workflow specs kept for provenance
 

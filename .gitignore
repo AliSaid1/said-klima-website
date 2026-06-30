@@ -3,8 +3,22 @@ node_modules/
 coverage/
 .DS_Store
 *.log
+
+# TypeScript / Next.js build artifacts (auto-generated)
+*.tsbuildinfo
+next-env.d.ts
+
 .env*
 !.env.example
+
+# Temp reorg/inventory artifacts (not source)
+md_inventory.txt
+md_reorg_*.log
+md_backup_*/
+
+# Personal job-application material — keep private, do not publish
+COVER_LETTER.md
+PROJECT_ONEPAGER.md
 
 # Lock file contains corporate artifactory URLs — regenerate with npm install
 package-lock.json

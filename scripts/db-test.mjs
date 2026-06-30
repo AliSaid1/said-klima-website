@@ -1,4 +1,4 @@
-import sql from '../Database/db.js'
+import sql from '../database/db.js'
 
 async function test() {
   try {

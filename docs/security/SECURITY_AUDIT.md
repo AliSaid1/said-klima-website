@@ -51,38 +51,14 @@
 
 ---
 
-## ⚠️ Remaining Low-Severity Items
+## 📎 Related documents
 
-### LOW
-
-#### L-1: `metadata.json` in project root — verify no secrets
-- Check `metadata.json` contains no API keys or tokens before committing.
-
-#### L-2: `next.config.ts` — `eslint.ignoreDuringBuilds: true`
-- Disabling lint on builds can let security-relevant warnings go unnoticed.
-- **Fix:** Set to `false` and fix any lint errors.
-
-#### L-3: CSP uses `'unsafe-eval'` and `'unsafe-inline'`
-- Required by Next.js dev mode, but you should tighten this in production with `nonce`-based CSP.
-- See: https://nextjs.org/docs/app/building-your-application/configuring/content-security-policy
-
----
-
-## 🔧 One-Time Setup Required (Production)
-
-### Upstash Redis (for persistent rate limiting on Vercel)
-1. Go to https://console.upstash.com → Create a serverless Redis database
-2. Copy the REST URL and token
-3. Add to Vercel env vars (and `.env.local` for local testing):
-   ```
-   UPSTASH_REDIS_REST_URL=https://YOUR_URL.upstash.io
-   UPSTASH_REDIS_REST_TOKEN=YOUR_TOKEN
-   ```
-4. Without these vars the app works fine — uses in-memory fallback
-
-### CRON_SECRET — also update in Vercel
-The new strong CRON_SECRET is already in your `.env.local`.  
-**Also add it to your Vercel project environment variables** so the production cron job can authenticate.
+- **Plain-English explanation of every finding above** (what was wrong, why it mattered, how
+  we fixed it — written for non-security readers):
+  [`SECURITY_FINDINGS_EXPLAINED.md`](SECURITY_FINDINGS_EXPLAINED.md)
+- **Open action items & one-time production setup** (remaining low-severity items, Upstash
+  Redis, `CRON_SECRET`) tracked as a checklist:
+  [`SECURITY_ACTION_ITEMS.md`](SECURITY_ACTION_ITEMS.md)
 
 ---
 
