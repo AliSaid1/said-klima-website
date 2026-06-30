@@ -20,8 +20,11 @@ md_backup_*/
 COVER_LETTER.md
 PROJECT_ONEPAGER.md
 
-# Lock file contains corporate artifactory URLs — regenerate with npm install
+# Lock file not committed — run `npm install` to generate it locally
 package-lock.json
+
+# Local npm config (may contain private/registry settings)
+.npmrc
 
 # Dev output / AI bundle files (not needed in source control)
 dev-output.log

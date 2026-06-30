@@ -1,14 +1,13 @@
 import type {NextConfig} from 'next';
 
-// ── Corporate-proxy TLS workaround (development only) ──────────────────────────
-// On the a corporate network (and other corporate networks with SSL inspection)
-// all outbound HTTPS is re-signed by a corporate CA that Node.js doesn't trust.
-// Every server-side fetch to Supabase fails with SELF_SIGNED_CERT_IN_CHAIN.
-// Setting NODE_TLS_REJECT_UNAUTHORIZED=0 here — before any fetch is made —
-// tells Node.js to accept any certificate in development.
+// ── TLS workaround for SSL-inspecting proxies (development only) ───────────────
+// Some networks with SSL inspection re-sign outbound HTTPS using a custom CA that
+// Node.js doesn't trust, so every server-side fetch (e.g. to Supabase) fails with
+// SELF_SIGNED_CERT_IN_CHAIN. Setting NODE_TLS_REJECT_UNAUTHORIZED=0 here — before
+// any fetch is made — tells Node.js to accept any certificate in development.
 //
-// ⚠️  NEVER set this in production.  The guard below ensures it is stripped at
-//     build/deploy time.  In production the real Supabase certs are trusted.
+// ⚠️  NEVER set this in production. The guard below ensures it is stripped at
+//     build/deploy time; in production real certificates are trusted.
 if (process.env.NODE_ENV !== 'production') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }

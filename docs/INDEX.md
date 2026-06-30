@@ -22,7 +22,6 @@ the deeper engineering and process documentation, grouped by purpose.
 - [Email Branding Plan](plans/EMAIL_BRANDING_PLAN.md)
 - [Order PDF & Rechnung Plan](plans/ORDER_PDF_AND_RECHNUNG_PLAN.md)
 - [PDF & Email Fix Plan](plans/PDF_AND_EMAIL_FIX_PLAN.md)
-- [Deployment Preparation](plans/DEPLOYMENT_PREPARATION.md)
 - [Feature Requirements](plans/FEATURE_REQUIREMENTS.md)
 
 ## 🗄️ Archive (historic AI-workflow specs)
