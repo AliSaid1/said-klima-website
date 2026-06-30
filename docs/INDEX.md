@@ -14,6 +14,7 @@ the deeper engineering and process documentation, grouped by purpose.
 ## 🗺️ Feature plans & design docs (RFCs)
 
 - [Refactoring Plan](plans/REFACTORING_PLAN.md)
+- [Backend API Refactoring Plan (senior feedback analysis)](plans/API_REFACTORING_PLAN.md)
 - [Stripe Checkout Plan](plans/STRIPE_CHECKOUT_PLAN.md)
 - [Stripe Payment Methods](plans/STRIPE_PAYMENT_METHODS.md)
 - [Stripe Dashboard Features](plans/STRIPE_DASHBOARD_FEATURES.md)
