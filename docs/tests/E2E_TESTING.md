@@ -53,6 +53,25 @@ Skips unless `TEST_EMAIL` / `TEST_PASSWORD` are set. Covers:
   a fresh/empty environment never produces a false failure.
 - Also verifies the empty-cart state.
 
+### `tests/checkout-ui.spec.ts` — checkout → Stripe (gated on `STRIPE_SECRET_KEY`)
+- Adds a product to the cart and asserts **"Zur Kasse"** redirects to Stripe's
+  hosted checkout (`checkout.stripe.com`). Stops there — payment happens on
+  Stripe and completes via webhook.
+- Skips when `STRIPE_SECRET_KEY` is unset (a Checkout Session can't be created).
+
+### `tests/stripe-webhook.spec.ts` — Stripe webhook (`POST /api/webhooks/stripe`)
+- **Always runs:** a request with no `stripe-signature` is rejected (`400`).
+- **Gated on `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`:** a forged signature
+  is rejected (`400`).
+- **Gated on Stripe secrets + `SUPABASE_SERVICE_ROLE_KEY`:** a signed
+  `checkout.session.async_payment_failed` event transitions the seeded order to
+  `fehlgeschlagen` (asserted in the DB). Uses `helpers/stripe.ts` to sign events
+  (`generateTestHeaderString`) and seed/clean up the order via the service-role
+  client.
+- The Stripe *success* paths (`checkout.session.completed` /
+  `async_payment_succeeded`) call the real Stripe API (`sessions.retrieve`), so
+  they're covered by the UI-up-to-Stripe test rather than synthetic events.
+
 ### Pre-existing specs (gated / opt-in)
 - `tests/account-addresses.spec.ts` — customer address CRUD on `/account`.
   Skipped unless `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` are set (needs a seeded
@@ -95,6 +114,9 @@ reads them from the process environment:
 | `BASE_URL` | App URL under test (default `http://localhost:3000`) |
 | `TEST_EMAIL` / `TEST_PASSWORD` | Admin login — enables admin-gated tests |
 | `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` | *Optional* — customer login; enables `account-addresses` |
+| `STRIPE_SECRET_KEY` | *Optional* — Stripe **test-mode** secret; enables the checkout→Stripe redirect test and webhook signature test |
+| `STRIPE_WEBHOOK_SECRET` | *Optional* — webhook signing secret; enables the signed-webhook tests |
+| `SUPABASE_SERVICE_ROLE_KEY` | *Optional (already set in CI)* — needed to seed an order for the `async_payment_failed` webhook test |
 | `RUN_UPLOAD_E2E` | *Optional* — set to `1` to run the opt-in Storage upload spec |
 
 > Without `TEST_EMAIL` / `TEST_PASSWORD` the admin tests **skip** (not fail).
@@ -107,13 +129,20 @@ Run on Chromium against the **seeded test project** (with `TEST_EMAIL` /
 `TEST_PASSWORD`):
 
 ```
-17 passed, 8 skipped
+18 passed, 11 skipped
   - passed: 11 public smoke + home→shop nav
   - passed: 3 admin dashboard (login, section nav, auth redirect)
   - passed: 2 shop-cart (add-to-cart, empty cart)
+  - passed: 1 stripe-webhook (missing-signature → 400, always enforced)
   - skipped: 7 account-addresses (no customer user — TEST_USER_* unset)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
+  - skipped: 2 stripe-webhook (forged-sig + async_payment_failed — Stripe secrets unset)
+  - skipped: 1 checkout-ui (Stripe redirect — STRIPE_SECRET_KEY unset)
 ```
+
+Once real Stripe **test-mode** secrets (`STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`) are configured, the 3 payment tests activate
+(→ 21 passed, 8 skipped).
 
 Without a seeded DB / admin credentials, the admin and add-to-cart tests skip
 too (they never fail on a bare environment). See [CI_SETUP.md](./CI_SETUP.md)
