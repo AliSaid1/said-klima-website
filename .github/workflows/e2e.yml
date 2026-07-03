@@ -52,6 +52,28 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Verify required secrets are present
+        run: |
+          fail=0
+          check() {
+            if [ -z "$2" ]; then
+              echo "::error::Secret '$1' is EMPTY or not set"
+              fail=1
+            else
+              echo "OK: $1 is set (${#2} chars)"
+            fi
+          }
+          check NEXT_PUBLIC_SUPABASE_URL "$NEXT_PUBLIC_SUPABASE_URL"
+          check NEXT_PUBLIC_SUPABASE_ANON_KEY "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          check SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY"
+          check SUPABASE_ACCESS_TOKEN "$SUPABASE_ACCESS_TOKEN"
+          check TEST_EMAIL "$TEST_EMAIL"
+          check TEST_PASSWORD "$TEST_PASSWORD"
+          if [ "$fail" = "1" ]; then
+            echo "::error::One or more required secrets are missing. Add them under Settings → Secrets and variables → Actions → Repository secrets (NOT Variables)."
+            exit 1
+          fi
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
