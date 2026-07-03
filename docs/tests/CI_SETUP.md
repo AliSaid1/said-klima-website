@@ -10,7 +10,7 @@ push / PR to `main`.
 ## 1. What the workflow does
 
 ```
-checkout → setup Node 20 → npm ci → install Playwright browsers
+checkout → setup Node 22 → npm install → install Playwright browsers
         → npm run seed:test              (schema + test data + admin user)
         → npm run build                  (compile gate)
         → npx playwright test --project=chromium
