@@ -1,20 +1,21 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 
-const baseURL = process.env.BASE_URL || 'http://localhost:3001';
+const baseURL = process.env.BASE_URL || 'http://localhost:3000';
 const fixturePath = path.resolve(__dirname, 'fixtures', 'sample.png');
 
-// This test performs a UI login using credentials provided via env variables
-// TEST_EMAIL and TEST_PASSWORD must be set in your environment when running this.
+// This test drives the rich-text editor image upload through the UI. It needs a
+// logged-in session that can reach /admin/content and a working Storage bucket,
+// so it is opt-in: set RUN_UPLOAD_E2E=1 (plus TEST_EMAIL/TEST_PASSWORD) to run it.
 
 test.describe('Editor image upload (UI)', () => {
   test('login, open editor, upload image, verify public URL', async ({ page }) => {
     const email = process.env.TEST_EMAIL;
     const password = process.env.TEST_PASSWORD;
-    if (!email || !password) {
-      test.skip(true, 'TEST_EMAIL/TEST_PASSWORD not set');
-      return;
-    }
+    test.skip(
+      process.env.RUN_UPLOAD_E2E !== '1' || !email || !password,
+      'Storage upload E2E is opt-in — set RUN_UPLOAD_E2E=1 with TEST_EMAIL/TEST_PASSWORD',
+    );
 
     // Go to login and sign in
     await page.goto(`${baseURL}/account/login`);

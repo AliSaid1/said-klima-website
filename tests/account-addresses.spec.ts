@@ -1,16 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-// Setup: configure baseURL and test user credentials
+// Setup: configure baseURL and test user credentials.
+// These tests exercise the *customer* account area and need a seeded customer
+// user (plus existing addresses). They are skipped unless TEST_USER_EMAIL /
+// TEST_USER_PASSWORD are explicitly provided — the CI seed only provisions the
+// admin user (see docs/tests/CI_SETUP.md).
 const baseURL = process.env.BASE_URL || 'http://localhost:3000';
-const testUserEmail = process.env.TEST_USER_EMAIL || 'test@example.com';
-const testUserPassword = process.env.TEST_USER_PASSWORD || 'testPassword123';
+const testUserEmail = process.env.TEST_USER_EMAIL;
+const testUserPassword = process.env.TEST_USER_PASSWORD;
 
 test.describe('Account Page - Address Management', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(
+      !testUserEmail || !testUserPassword,
+      'TEST_USER_EMAIL/TEST_USER_PASSWORD not set — customer account E2E skipped',
+    );
     // Navigate to login page and login
     await page.goto(`${baseURL}/account/login`);
-    await page.fill('input[type="email"]', testUserEmail);
-    await page.fill('input[type="password"]', testUserPassword);
+    await page.fill('input[type="email"]', testUserEmail as string);
+    await page.fill('input[type="password"]', testUserPassword as string);
     await page.click('button:has-text("Anmelden")');
 
     // Wait for redirect to account page

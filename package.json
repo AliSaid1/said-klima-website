@@ -12,7 +12,8 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "migrate": "node -r dotenv/config scripts/apply-migrations.mjs",
-    "migrate:tls": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/apply-migrations.mjs"
+    "migrate:tls": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/apply-migrations.mjs",
+    "seed:test": "node -r dotenv/config scripts/seed-test-db.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
