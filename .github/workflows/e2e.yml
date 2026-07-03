@@ -52,6 +52,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Debug — secret names visible to Actions
+        run: |
+          echo "Secret NAMES visible to this workflow (values are masked by GitHub):"
+          cat <<'EOF'
+          ${{ toJSON(secrets) }}
+          EOF
+
       - name: Verify required secrets are present
         run: |
           fail=0
