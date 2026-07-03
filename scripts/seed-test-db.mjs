@@ -117,13 +117,24 @@ async function ensureAdminUser() {
     console.log(`  - created user ${userId}`);
   }
 
-  // The handle_new_user trigger defaults new users to 'kunde'; promote to admin.
+  if (!userId) throw new Error('Could not determine admin user id');
+
+  // The public schema (incl. benutzer) is wiped on every seed run, but the
+  // auth user persists. On re-runs the user already exists, so createUser
+  // takes the "already exists" path and the on_auth_user_created trigger
+  // (which inserts the benutzer row) never fires. Explicitly upsert the
+  // benutzer row keyed by the auth user id so the row always exists and is
+  // promoted to admin — otherwise the client-side admin role check gets 0
+  // rows (406) and redirects away from /admin.
+  const emailSql = TEST_EMAIL.replace(/'/g, "''");
   await execSQL(
-    `UPDATE public.benutzer SET rolle='admin', email_bestaetigt=true
-       WHERE email='${TEST_EMAIL.replace(/'/g, "''")}';`,
+    `INSERT INTO public.benutzer (id, vorname, nachname, email, passwort_hash, rolle, email_bestaetigt)
+       VALUES ('${userId}', 'E2E', 'Admin', '${emailSql}', 'supabase-auth', 'admin', true)
+     ON CONFLICT (id) DO UPDATE SET
+       rolle='admin', email_bestaetigt=true, email=EXCLUDED.email, aktualisiert_am=now();`,
     'promote-admin',
   );
-  console.log("  - promoted to rolle='admin'");
+  console.log("  - benutzer row upserted + promoted to rolle='admin'");
 }
 
 async function main() {

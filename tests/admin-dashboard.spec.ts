@@ -12,12 +12,9 @@ test.describe('Admin dashboard', () => {
   });
 
   test('shows the dashboard with KPI cards', async ({ page }) => {
-    // The dashboard is an async server component that awaits several Supabase
-    // queries before rendering, which can exceed the default 5s timeout when
-    // running against a remote test DB from CI.
     await expect(
       page.getByRole('heading', { name: 'Dashboard', level: 1 }),
-    ).toBeVisible({ timeout: 20000 });
+    ).toBeVisible();
 
     for (const label of [
       'Aktive Produkte',
@@ -25,7 +22,7 @@ test.describe('Admin dashboard', () => {
       'Anstehende Termine',
       'Umsatz (Monat)',
     ]) {
-      await expect(page.getByText(label).first()).toBeVisible({ timeout: 20000 });
+      await expect(page.getByText(label).first()).toBeVisible();
     }
   });
 
