@@ -17,6 +17,7 @@
     "migrate:tls": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/apply-migrations.mjs",
     "seed:test": "node -r dotenv/config scripts/seed-test-db.mjs",
     "seed:test:e2e": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/seed-test-db.mjs dotenv_config_path=.env.e2e.local",
+    "e2e": "npm run seed:test:e2e && npm run test:e2e",
     "copy:catalog": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/copy-catalog.mjs dotenv_config_path=.env.local"
   },
   "dependencies": {
