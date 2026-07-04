@@ -55,11 +55,12 @@ Skips unless `TEST_EMAIL` / `TEST_PASSWORD` are set. Covers:
 
 ### `tests/checkout-ui.spec.ts` — checkout → Stripe (gated on `STRIPE_SECRET_KEY`)
 - Adds a product to the cart, clicks **"Zur Kasse"**, and asserts that
-  `POST /api/checkout` returns `200` with a `checkout.stripe.com` session URL.
-  It asserts on the **API response** (via `page.waitForResponse`) rather than
-  navigating to Stripe's external page, so it isn't flaky on a slow Stripe load
-  and it surfaces the server error body if session creation fails. Payment
-  completes via webhook.
+  `POST /api/checkout` returns `200` with a real Stripe Checkout Session id
+  (`cs_…`) — the definitive proof the UI reached Stripe. The hosted
+  `checkout.stripe.com` URL is also asserted when Stripe returns one. It asserts
+  on the **API response** (via `page.waitForResponse`) rather than navigating to
+  Stripe's external page, so it isn't flaky on a slow Stripe load and it surfaces
+  the server error body if session creation fails. Payment completes via webhook.
 - Skips when `STRIPE_SECRET_KEY` is unset (a Checkout Session can't be created).
 
 ### `tests/checkout-validation.spec.ts` — checkout input validation (gated on `SUPABASE_SERVICE_ROLE_KEY`)

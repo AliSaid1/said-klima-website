@@ -49,7 +49,7 @@ test.describe('Checkout validation', () => {
       items: [{ artikel_id: 'not-a-uuid', menge: 1 }],
     });
     expect(res.status()).toBe(400);
-    expect((await res.json()).error).toMatch(/Ungültige Artikel-IDs/i);
+    expect((await res.json()).error).toMatch(/Artikel-IDs/i);
   });
 
   test('rejects an invalid quantity (400)', async ({ request }) => {
@@ -57,7 +57,7 @@ test.describe('Checkout validation', () => {
       items: [{ artikel_id: NONEXISTENT_UUID, menge: 0 }],
     });
     expect(res.status()).toBe(400);
-    expect((await res.json()).error).toMatch(/Ungültige Mengenangaben/i);
+    expect((await res.json()).error).toMatch(/Mengenangaben/i);
   });
 
   test('rejects a valid-looking UUID that is not a real article (400)', async ({

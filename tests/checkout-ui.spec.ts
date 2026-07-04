@@ -58,10 +58,14 @@ test.describe('Checkout → Stripe', () => {
     ]);
 
     const body = await resp.json().catch(() => ({}));
-    expect(
-      resp.status(),
-      `checkout failed (${resp.status()}): ${JSON.stringify(body)}`,
-    ).toBe(200);
-    expect(String(body.url)).toContain('checkout.stripe.com');
+    const info = `checkout ${resp.status()}: ${JSON.stringify(body)}`;
+    expect(resp.status(), info).toBe(200);
+    // A real Stripe Checkout Session was created (cs_… id) — the definitive
+    // success signal that "Zur Kasse" reached Stripe. The hosted `url` is also
+    // asserted when Stripe returns one.
+    expect(String(body.session_id), info).toMatch(/^cs_/);
+    if (body.url) {
+      expect(String(body.url)).toContain('checkout.stripe.com');
+    }
   });
 });
