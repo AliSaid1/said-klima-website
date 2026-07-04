@@ -35,9 +35,11 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     let mounted = true;
+    // Mount-time data fetch; fetchCategories toggles its own loading state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCategories().then(() => { if (!mounted) return; });
     return () => { mounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const handleCreate = async () => {

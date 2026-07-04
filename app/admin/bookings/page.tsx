@@ -100,6 +100,8 @@ export default function BookingsPage() {
   };
 
   useEffect(() => {
+    // Mount-time data fetch; loadBookings toggles loading state internally.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBookings();
   }, []);
 

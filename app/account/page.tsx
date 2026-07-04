@@ -212,7 +212,7 @@ export default function AccountPage() {
       setBookingsLoading(false);
     };
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [activeTab, authUser]);
 
   // ─── Save profile ─────────────────────────────────────
@@ -264,11 +264,12 @@ export default function AccountPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Fehler beim Aktualisieren');
 
-        setLastAdresseAction({ type: 'update', id: editingAdresseId, data: prevAddress });
+        const undoAction = { type: 'update' as const, id: editingAdresseId, data: prevAddress };
+        setLastAdresseAction(undoAction);
         toast.success('Adresse aktualisiert!', {
           action: {
             label: 'Rückgängig',
-            onClick: () => handleUndoAddressAction(),
+            onClick: () => handleUndoAddressAction(undoAction),
           },
         });
         setEditingAdresseId(null);
@@ -278,11 +279,12 @@ export default function AccountPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error || 'Fehler beim Erstellen');
 
-        setLastAdresseAction({ type: 'add', id: data.data?.id });
+        const undoAction = { type: 'add' as const, id: data.data?.id };
+        setLastAdresseAction(undoAction);
         toast.success('Adresse hinzugefügt!', {
           action: {
             label: 'Rückgängig',
-            onClick: () => handleUndoAddressAction(),
+            onClick: () => handleUndoAddressAction(undoAction),
           },
         });
       }
@@ -295,14 +297,26 @@ export default function AccountPage() {
     setAdresseSaving(false);
   };
 
-  const handleUndoAddressAction = async () => {
-    if (!lastAdresseAction) return;
+  /**
+   * Reverts the most recent address add/update.
+   *
+   * Accepts the action explicitly (from the triggering toast) so it never reads
+   * a stale `lastAdresseAction` closure — the state setter has not necessarily
+   * re-rendered by the time the toast's undo button is created. Falls back to
+   * the state value when no argument is passed.
+   *
+   * @param action - The add/update action to revert; defaults to the last action in state.
+   */
+  const handleUndoAddressAction = async (
+    action: typeof lastAdresseAction = lastAdresseAction,
+  ) => {
+    if (!action) return;
     try {
-      if (lastAdresseAction.type === 'add' && lastAdresseAction.id) {
-        await handleDeleteAdresse(lastAdresseAction.id);
+      if (action.type === 'add' && action.id) {
+        await handleDeleteAdresse(action.id);
         toast.success('Änderung rückgängig gemacht');
-      } else if (lastAdresseAction.type === 'update' && lastAdresseAction.id && lastAdresseAction.data) {
-        const body = { id: lastAdresseAction.id, benutzer_id: authUser?.id, ...lastAdresseAction.data };
+      } else if (action.type === 'update' && action.id && action.data) {
+        const body = { id: action.id, benutzer_id: authUser?.id, ...action.data };
         const res = await fetch('/api/benutzer-adressen', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) throw new Error('Fehler beim Rückgängigmachen');
         await reloadAddresses();

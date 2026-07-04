@@ -261,6 +261,8 @@ export default function BookingPage() {
   // Fetch slots when entering step 2
   useEffect(() => {
     if (step === 2 && selectedDates.length > 0 && selectedServices.length > 0) {
+      // Step-triggered fetch; fetchAllSlots toggles its own loading state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchAllSlots(selectedDates, selectedServices);
     }
   }, [step, selectedDates, selectedServices, fetchAllSlots]);

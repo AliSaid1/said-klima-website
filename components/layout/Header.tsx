@@ -17,6 +17,9 @@ export default function Header() {
   const [companyPhone, setCompanyPhone] = useState<string | null>(null);
 
   useEffect(() => {
+    // Intentional mount-time client flag to avoid SSR/CSR hydration mismatch
+    // for cart count / auth state. Safe to set synchronously on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsClient(true);
 
     // Load dynamic phone number from company settings

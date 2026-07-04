@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       try {
         // createBucket is available on the admin client (service role)
         // The exact return shape can vary; treat any error as failure
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+         
         // @ts-ignore
         const { data: createData, error: createError } = await admin.storage.createBucket(bucket, { public: true });
         if (createError) {
