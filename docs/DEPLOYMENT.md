@@ -333,28 +333,14 @@ dedicated **test-mode** webhook endpoint in Stripe pointing at
 `https://staging.kks-said.de/api/webhooks/stripe` and use *its* signing secret
 for the Preview `STRIPE_WEBHOOK_SECRET`.
 
-**Copying the catalog into staging:** the seeded E2E catalog has no images, so
-staging can look bare. To mirror the current production catalog (rows **and**
-`product-images` storage files) into your staging/test project, run:
-
-```bash
-npm run copy:catalog
-```
-
-By default it copies **from** `.env.local` (production, read-only) **to** the
-test/staging project in `.env.e2e.local`. It first TRUNCATEs the target's
-catalog tables (so production rows land with their original IDs, keeping image
-links intact), then copies rows in FK-safe order and the storage files. Options:
-`DRY_RUN=1` (preview counts, no writes), `SKIP_STORAGE=1` (rows only),
-`SKIP_CLEAR=1` (don't truncate first). Override the target explicitly with
-`TARGET_SUPABASE_URL` / `TARGET_SERVICE_ROLE_KEY` env vars. It refuses to run if
-source and target are the same project.
-
-> ⚠️ **Ephemeral if the target is the CI test project.** That project is wiped +
-> reseeded on every CI run (`npm run seed:test`), so a copy into it lasts only
-> until the next `develop`/`main` push. For a **persistent** real-looking staging
-> catalog, create a **dedicated staging Supabase project** (separate from the CI
-> test project), point Vercel Preview at it, and copy the catalog there once.
+**Catalog on staging:** staging (Vercel Preview) uses the same TEST Supabase
+project that CI wipes and re-seeds on every `develop`/`main` push
+(`npm run seed:test`). So the products you see on staging are always the
+**seed catalog** from `supabase/migrations/004_seed_testdaten.sql` — extend that
+seed if you want richer staging/test data. A one-off copy of the production
+catalog into this project would not persist (the next push re-seeds it). For a
+**persistent** real-looking staging catalog you would need a **dedicated staging
+Supabase project** separate from the CI test project.
 
 ---
 

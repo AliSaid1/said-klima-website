@@ -30,10 +30,13 @@ export default defineConfig({
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Retry failed tests. CI retries more; locally 1 retry absorbs the
+   * first-hit `next dev` compile slowness on heavy pages (e.g. /admin). */
+  retries: process.env.CI ? 2 : 1,
+  /* Serial execution. These E2E tests share one seeded user + one dev server;
+   * running them in parallel causes state races (e.g. address edits) and
+   * dev-compile contention. CI already uses 1 worker — match it locally. */
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
