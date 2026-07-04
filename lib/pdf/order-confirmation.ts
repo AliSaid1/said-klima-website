@@ -1,3 +1,8 @@
+/**
+ * React-PDF document composition for customer-facing order confirmations.
+ * It assembles shared PDF components into an A4 German Bestellbestätigung
+ * (order confirmation) using order data, company branding, and fixed footers.
+ */
 import React from 'react';
 import { Document, Page } from '@react-pdf/renderer';
 import { styles } from './styles';
@@ -15,6 +20,12 @@ import type { OrderPdfData, PdfCompanyInfo } from './types';
 /**
  * Full React-PDF Document component for Order Confirmation.
  * Rendered server-side via renderToBuffer().
+ *
+ * @param props - Component props.
+ * @param props.data - Complete bestellung (order) data including addresses,
+ * line items, totals, status, and payment metadata.
+ * @param props.company - Company identity and contact information for branding.
+ * @returns React-PDF Document element ready for server-side rendering.
  */
 export function OrderConfirmationDocument({
   data,
@@ -67,5 +78,4 @@ export function OrderConfirmationDocument({
     )
   );
 }
-
 

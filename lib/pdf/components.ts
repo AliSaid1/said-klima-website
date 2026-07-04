@@ -1,3 +1,8 @@
+/**
+ * Reusable React-PDF components and formatters for German order documents.
+ * The module renders branded headers, address blocks, item tables, totals,
+ * payment labels, thank-you messaging, and fixed footers for PDF generators.
+ */
 import React from 'react';
 import { View, Text, Image } from '@react-pdf/renderer';
 import { styles } from './styles';
@@ -5,6 +10,12 @@ import type { PdfAddressData, PdfCompanyInfo } from './types';
 import path from 'path';
 
 // ─── Format helpers ────────────────────────────────────────
+/**
+ * Formats a numeric amount as a German Euro currency string.
+ *
+ * @param value - Monetary amount in Euro units.
+ * @returns Localized amount with two decimal places and trailing Euro symbol.
+ */
 export function formatCurrency(value: number): string {
   return value.toLocaleString('de-DE', {
     minimumFractionDigits: 2,
@@ -12,6 +23,12 @@ export function formatCurrency(value: number): string {
   }) + ' €';
 }
 
+/**
+ * Formats a date-like string for German customer-facing PDFs.
+ *
+ * @param dateStr - ISO date or readable date string from a bestellung (order).
+ * @returns German date string when parsing succeeds, otherwise the original input.
+ */
 export function formatDate(dateStr: string): string {
   try {
     const d = new Date(dateStr);
@@ -62,6 +79,13 @@ const logoPath = path.join(process.cwd(), 'public', 'images', 'KKS_LOGO.png');
 // ═══════════════════════════════════════════════════════════
 // HEADER COMPONENT
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders the PDF document header with logo and company contact details.
+ *
+ * @param props - Component props.
+ * @param props.company - Company identity and contact information for the header.
+ * @returns React-PDF element tree for the header section.
+ */
 export function PdfHeader({ company }: { company: PdfCompanyInfo }) {
   return React.createElement(
     View,
@@ -93,6 +117,16 @@ export function PdfHeader({ company }: { company: PdfCompanyInfo }) {
 // ═══════════════════════════════════════════════════════════
 // TITLE ROW (Document title + metadata)
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders the document title and order metadata row.
+ *
+ * @param props - Component props.
+ * @param props.title - Uppercase document title shown on the left.
+ * @param props.bestellnummer - Bestellnummer (order number) displayed in metadata.
+ * @param props.datum - Order date string formatted for German output.
+ * @param props.status - Human-readable payment or order status badge text.
+ * @returns React-PDF element tree for the title and metadata section.
+ */
 export function PdfTitleRow({
   title,
   bestellnummer,
@@ -127,6 +161,14 @@ export function PdfTitleRow({
 // ═══════════════════════════════════════════════════════════
 // ADDRESS BLOCK
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders one labeled adresse (address) block.
+ *
+ * @param props - Component props.
+ * @param props.label - Address role label such as Rechnungsadresse or Lieferadresse.
+ * @param props.address - Address data to render; null suppresses the block.
+ * @returns React-PDF address block or null when no address is available.
+ */
 export function PdfAddressBlock({
   label,
   address,
@@ -164,6 +206,14 @@ export function PdfAddressBlock({
 // ═══════════════════════════════════════════════════════════
 // ADDRESS ROW (two address blocks side by side)
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders billing and shipping addresses side by side.
+ *
+ * @param props - Component props.
+ * @param props.rechnungsadresse - Billing adresse (address) for the bestellung (order).
+ * @param props.lieferadresse - Shipping adresse (address) for the bestellung (order).
+ * @returns React-PDF row containing the available address blocks.
+ */
 export function PdfAddressRow({
   rechnungsadresse,
   lieferadresse,
@@ -188,6 +238,14 @@ export function PdfAddressRow({
 // ═══════════════════════════════════════════════════════════
 // ITEMS TABLE
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders the table of ordered artikel (products) and variants.
+ *
+ * @param props - Component props.
+ * @param props.positionen - Line items with display position, quantity, gross price,
+ * optional product number, and optional variant label.
+ * @returns React-PDF element tree for the line-item table.
+ */
 export function PdfItemsTable({
   positionen,
 }: {
@@ -292,6 +350,17 @@ export function PdfItemsTable({
 // ═══════════════════════════════════════════════════════════
 // TOTALS BOX
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders order totals, versandkosten (shipping cost), included VAT, and payment.
+ *
+ * @param props - Component props.
+ * @param props.zwischensumme - Gross subtotal before shipping.
+ * @param props.versand - Gross shipping cost; zero is displayed as Kostenlos.
+ * @param props.steuer - Included VAT amount shown as informational text.
+ * @param props.gesamt - Final gross total charged to the customer.
+ * @param props.zahlungsmethode - Optional payment method identifier to localize.
+ * @returns React-PDF element tree for totals and payment summary.
+ */
 export function PdfTotals({
   zwischensumme,
   versand,
@@ -365,6 +434,13 @@ export function PdfTotals({
 // ═══════════════════════════════════════════════════════════
 // THANK-YOU SECTION
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders the thank-you callout with support contact details.
+ *
+ * @param props - Component props.
+ * @param props.company - Company contact data used in the support sentence.
+ * @returns React-PDF element tree for the thank-you section.
+ */
 export function PdfThankYou({ company }: { company: PdfCompanyInfo }) {
   return React.createElement(
     View,
@@ -385,6 +461,13 @@ export function PdfThankYou({ company }: { company: PdfCompanyInfo }) {
 // ═══════════════════════════════════════════════════════════
 // FOOTER
 // ═══════════════════════════════════════════════════════════
+/**
+ * Renders the fixed footer repeated on every PDF page.
+ *
+ * @param props - Component props.
+ * @param props.company - Company contact and website data printed in the footer.
+ * @returns React-PDF element tree for a fixed footer.
+ */
 export function PdfFooter({ company }: { company: PdfCompanyInfo }) {
   return React.createElement(
     View,
@@ -413,4 +496,3 @@ export function PdfFooter({ company }: { company: PdfCompanyInfo }) {
     )
   );
 }
-

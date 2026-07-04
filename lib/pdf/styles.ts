@@ -1,6 +1,16 @@
+/**
+ * Shared React-PDF style definitions for branded commerce documents.
+ * The module centralizes colors, layout metrics, table styling, totals,
+ * payment badges, and fixed footers used by generated German PDFs.
+ */
 import { StyleSheet } from '@react-pdf/renderer';
 
 // ─── KKS Brand Colors ─────────────────────────────────────
+/**
+ * Brand and semantic color tokens used by PDF components.
+ * Values are static hex colors so documents render consistently in server-side
+ * React-PDF output and email attachments.
+ */
 export const COLORS = {
   primary: '#1e3a5f',       // Dark blue (header gradient start)
   primaryLight: '#2563EB',  // Blue-600 (accents, links)
@@ -17,6 +27,11 @@ export const COLORS = {
 };
 
 // ─── Shared Styles ─────────────────────────────────────────
+/**
+ * React-PDF StyleSheet shared across document sections.
+ * Includes page sizing, header, address, line-item table, totals, payment,
+ * footer, and thank-you box styles for order confirmation documents.
+ */
 export const styles = StyleSheet.create({
   page: {
     fontFamily: 'Inter',
@@ -303,4 +318,3 @@ export const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
 });
-

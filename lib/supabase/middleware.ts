@@ -1,6 +1,21 @@
+/**
+ * Synchronizes Supabase authentication cookies inside Next.js middleware.
+ * The module refreshes response cookies, protects admin routes from anonymous
+ * access, and redirects authenticated admins away from the login page.
+ */
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
+/**
+ * Updates Supabase auth session cookies and applies lightweight admin routing.
+ * The middleware reads the JWT-backed session locally because Edge middleware
+ * cannot reliably call Supabase auth validation; full authorization remains in
+ * server-rendered admin code.
+ *
+ * @param request - Incoming Next.js middleware request with route and cookies.
+ * @returns A NextResponse that either forwards the request with refreshed cookies
+ * or redirects to the appropriate admin route.
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 

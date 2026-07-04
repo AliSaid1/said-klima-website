@@ -1,6 +1,19 @@
+/**
+ * Builds Supabase SSR clients for Next.js Server Components and server actions.
+ * The client reads and writes auth cookies through next/headers so Supabase
+ * sessions remain synchronized with middleware-managed authentication state.
+ */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+/**
+ * Creates a request-scoped Supabase server client backed by Next.js cookies.
+ * Cookie writes can be ignored in Server Components because middleware refreshes
+ * sessions and route handlers can persist cookie changes through responses.
+ *
+ * @returns A Supabase SSR client configured with public URL and anon key.
+ * @throws If required public Supabase environment variables are missing.
+ */
 export async function createClient() {
   const cookieStore = await cookies();
 
@@ -26,4 +39,3 @@ export async function createClient() {
     }
   );
 }
-

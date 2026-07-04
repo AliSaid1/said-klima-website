@@ -1,3 +1,9 @@
+/**
+ * Public PDF generation API for the application.
+ * The module registers fonts, merges branding defaults, exposes shared PDF data
+ * types, and renders bestellung (order) confirmations as buffers for Resend
+ * attachments or direct downloads.
+ */
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { registerFonts } from './fonts';
@@ -13,6 +19,9 @@ import {
 } from '@/lib/branding';
 
 // Re-export types for convenience
+/**
+ * Re-exports shared PDF data contracts for callers that build document payloads.
+ */
 export type { OrderPdfData, PdfCompanyInfo, PdfAddressData, PdfLineItem } from './types';
 
 // Default company info from branding constants
@@ -32,6 +41,7 @@ const DEFAULT_COMPANY: PdfCompanyInfo = {
  * @param data - Full order data (items, addresses, totals)
  * @param company - Optional company info override (defaults to branding constants)
  * @returns Buffer containing the PDF bytes
+ * @throws If font registration or React-PDF rendering fails.
  */
 export async function generateOrderConfirmationPdf(
   data: OrderPdfData,
@@ -50,4 +60,3 @@ export async function generateOrderConfirmationPdf(
   const buffer = await renderToBuffer(doc as any);
   return Buffer.from(buffer);
 }
-
