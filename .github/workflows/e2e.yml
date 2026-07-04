@@ -56,6 +56,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Check source encoding (no mojibake)
+        run: npm run check:encoding
+
       - name: Install dependencies
         run: npm install
 

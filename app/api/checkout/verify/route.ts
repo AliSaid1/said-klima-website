@@ -6,16 +6,16 @@ import { createAdminClient } from '@/lib/supabase/admin';
 // GET /api/checkout/verify?session_id=cs_xxx
 // Called by the success page immediately after payment.
 //
-// SAFETY CONTRACT â€” "first-write wins":
+// SAFETY CONTRACT — "first-write wins":
 //   1. We fetch the current DB row FIRST.
 //   2. We only write a field if it is currently null/empty.
 //   3. This makes the endpoint perfectly idempotent:
 //      - Safe to call multiple times (customer refreshes the success page).
-//      - Safe to run alongside the Stripe webhook â€” whichever runs first writes
+//      - Safe to run alongside the Stripe webhook — whichever runs first writes
 //        the data; the other becomes a no-op for already-filled fields.
 //   4. `status` is set based on payment_status:
-//      - 'paid'   â†’ 'bezahlt' (instant payment: card, paypal, etc.)
-//      - 'unpaid' â†’ 'warten_auf_zahlung' (delayed payment: bank transfer)
+//      - 'paid'   → 'bezahlt' (instant payment: card, paypal, etc.)
+//      - 'unpaid' → 'warten_auf_zahlung' (delayed payment: bank transfer)
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get('session_id');
 
@@ -45,25 +45,25 @@ export async function GET(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // â”€â”€ 1. Read current state from DB (one extra read, but ensures idempotency) â”€â”€
+    // ── 1. Read current state from DB (one extra read, but ensures idempotency) ──
     const { data: current } = await supabase
       .from('bestellungen')
       .select('rechnungsadresse_json, lieferadresse_json, gast_email, stripe_payment_intent_id, bestellt_am, zahlungsmethode')
       .eq('id', bestellungId)
       .single();
 
-    // â”€â”€ 2. Extract Stripe data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. Extract Stripe data ────────────────────────────────────────────────
     const pi      = sessionAny.payment_intent as (Stripe.PaymentIntent & { payment_method?: Stripe.PaymentMethod }) | null;
     const pmObj   = pi?.payment_method as Stripe.PaymentMethod | undefined;
     const card    = pmObj?.card;
     const billing = pmObj?.billing_details;
     const collectedInfo = sessionAny.collected_information;
 
-    // Resolve payment method â€” works for card, paypal, klarna, sepa_debit, link, bank transfer
+    // Resolve payment method — works for card, paypal, klarna, sepa_debit, link, bank transfer
     const resolvedPaymentMethod: string | null = (() => {
-      if (!pmObj) return isPending ? 'bankÃ¼berweisung' : null;
+      if (!pmObj) return isPending ? 'banküberweisung' : null;
       const pmType = pmObj.type;
-      if (pmType === 'customer_balance') return 'bankÃ¼berweisung';
+      if (pmType === 'customer_balance') return 'banküberweisung';
       if (pmType === 'card' && card?.brand) return card.brand;
       return pmType || null;
     })();
@@ -83,12 +83,12 @@ export async function GET(request: NextRequest) {
         land:      addrSrc.country      ?? undefined,
       } : null;
 
-    // â”€â”€ Rechnungsadresse (billing) â€” check multiple sources (API v20+ compat)
+    // ── Rechnungsadresse (billing) — check multiple sources (API v20+ compat)
     const rechnungsadresse = buildAddr(session.customer_details?.address, customerName)
                           ?? buildAddr(collectedInfo?.address, customerName)
                           ?? buildAddr(billing?.address, billing?.name ?? customerName);
 
-    // â”€â”€ Lieferadresse (shipping) â€” prefer collected_information.shipping_details (Stripe v20+)
+    // ── Lieferadresse (shipping) — prefer collected_information.shipping_details (Stripe v20+)
     const shipping = collectedInfo?.shipping_details
                   ?? sessionAny.shipping_details
                   ?? sessionAny.shipping
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       ? buildAddr(shipping.address, shipping.name ?? customerName)
       : rechnungsadresse;
 
-    // â”€â”€ 3. Build "fill-if-missing" update payload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Build "fill-if-missing" update payload ─────────────────────────────
     // Status depends on payment_status: instant = bezahlt, delayed = warten_auf_zahlung
     const orderStatus = isPaid ? 'bezahlt' : 'warten_auf_zahlung';
     const updatePayload: Record<string, unknown> = { status: orderStatus };
@@ -130,14 +130,14 @@ export async function GET(request: NextRequest) {
     if (stripeCustomerId)
       updatePayload.stripe_customer_id = stripeCustomerId;
 
-    // â”€â”€ 4. Persist (only if there is anything new to write) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. Persist (only if there is anything new to write) ───────────────────
     if (Object.keys(updatePayload).length > 1) {   // >1 because status is always present
       await supabase.from('bestellungen').update(updatePayload).eq('id', bestellungId);
     } else {
       await supabase.from('bestellungen').update({ status: orderStatus }).eq('id', bestellungId);
     }
 
-    // â”€â”€ 5. Create zahlungen record exactly once â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. Create zahlungen record exactly once ───────────────────────────────
     const { data: existingZahlung } = await supabase
       .from('zahlungen')
       .select('id')
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // â”€â”€ 6. Fetch the final order + line items for the success page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. Fetch the final order + line items for the success page ────────────
     const { data: order, error } = await supabase
       .from('bestellungen')
       .select('id, bestellnummer, status, gesamt_brutto, versand_brutto, lieferadresse_json, rechnungsadresse_json, gast_email, erstellt_am')
@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
       address:         lieferadresse ?? (order.lieferadresse_json as any),
       // Billing address (Rechnungsadresse)
       billing_address: rechnungsadresse ?? (order.rechnungsadresse_json as any),
-      // Payment details â€” supports card, paypal, klarna, sepa, link, bank transfer, etc.
+      // Payment details — supports card, paypal, klarna, sepa, link, bank transfer, etc.
       payment_method: resolvedPaymentMethod ?? 'card',
       card_last4:     card?.last4 ?? null,
       card_brand:     card?.brand ?? null,

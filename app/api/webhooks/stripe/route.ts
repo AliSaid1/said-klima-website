@@ -6,7 +6,7 @@ import { generateOrderConfirmationPdf } from '@/lib/pdf';
 import type { OrderPdfData } from '@/lib/pdf';
 import Stripe from 'stripe';
 
-// â”€â”€ Helper: Send confirmation emails + PDF for a paid order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helper: Send confirmation emails + PDF for a paid order ───────────────
 // Called from both checkout.session.completed (instant payment) and
 // checkout.session.async_payment_succeeded (delayed payment e.g. bank transfer).
 async function sendOrderConfirmationEmails(
@@ -38,7 +38,7 @@ async function sendOrderConfirmationEmails(
     .eq('bestellung_id', bestellungId)
     .order('erstellt_am', { ascending: true });
 
-  // â”€â”€ Generate PDF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Generate PDF ──────────────────────────────────────────────
   let pdfBuffer: Buffer | undefined;
   try {
     const pdfData: OrderPdfData = {
@@ -69,10 +69,10 @@ async function sendOrderConfirmationEmails(
     console.log(`[PDF] Generated order confirmation PDF (${pdfBuffer.length} bytes) for ${pdfData.bestellnummer}`);
   } catch (pdfErr) {
     console.error('[PDF] Failed to generate order confirmation PDF:', pdfErr);
-    // Continue without PDF â€” email will still be sent without attachment
+    // Continue without PDF — email will still be sent without attachment
   }
 
-  // â”€â”€ Send customer email (with PDF attachment) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send customer email (with PDF attachment) ─────────────────
   await sendOrderConfirmation({
     to: customerEmail,
     kundenname: session.customer_details?.name ?? 'Kunde',
@@ -81,7 +81,7 @@ async function sendOrderConfirmationEmails(
     pdfBuffer,
   });
 
-  // â”€â”€ Notify admin (with PDF attachment) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Notify admin (with PDF attachment) ────────────────────────
   const lieferAddr = lieferAdresse ?? (fullOrder?.lieferadresse_json as any);
   const addrParts = lieferAddr
     ? [lieferAddr.name, lieferAddr.strasse, `${lieferAddr.plz || ''} ${lieferAddr.ort || ''}`.trim(), lieferAddr.land].filter(Boolean)
@@ -103,7 +103,7 @@ async function sendOrderConfirmationEmails(
   });
 }
 
-// POST /api/webhooks/stripe â€” Handle Stripe webhook events
+// POST /api/webhooks/stripe — Handle Stripe webhook events
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const sig = request.headers.get('stripe-signature');
@@ -129,13 +129,13 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient();
 
   switch (event.type) {
-    // â”€â”€ Checkout completed (may be paid instantly OR awaiting async payment) â”€â”€
+    // ── Checkout completed (may be paid instantly OR awaiting async payment) ──
     case 'checkout.session.completed': {
       const eventSession = event.data.object as Stripe.Checkout.Session;
       const bestellungId = eventSession.metadata?.bestellung_id;
 
       if (bestellungId) {
-        // â”€â”€ Retrieve the FULL session from the Stripe API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Retrieve the FULL session from the Stripe API ─────────────────
         // The webhook event payload may omit fields like shipping_details.
         // Fetching the full session guarantees we have billing + shipping
         // addresses, payment_intent, etc.
@@ -144,25 +144,25 @@ export async function POST(request: NextRequest) {
         });
         const sessionAny = session as any;
 
-        // â”€â”€ Extract customer details collected by Stripe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Extract customer details collected by Stripe ───────────────────
         // Stripe API v20+ (2026-03-25.dahlia) may place data under collected_information
         const details  = session.customer_details;
         const collectedInfo = sessionAny.collected_information;
 
-        // â”€â”€ Extract card / payment details from expanded payment_intent â”€â”€â”€â”€
+        // ── Extract card / payment details from expanded payment_intent ────
         // For bank transfers (customer_balance), payment_intent may not have
-        // a payment_method yet â€” this is expected.
+        // a payment_method yet — this is expected.
         const pi      = sessionAny.payment_intent as (Stripe.PaymentIntent & { payment_method?: Stripe.PaymentMethod }) | null;
         const pmObj   = pi?.payment_method as Stripe.PaymentMethod | undefined;
         const card    = pmObj?.card;
         const billing = pmObj?.billing_details;
 
-        // Resolve payment method name â€” works for card, paypal, klarna, sepa, link, etc.
+        // Resolve payment method name — works for card, paypal, klarna, sepa, link, etc.
         // For bank transfers, pmObj.type is 'customer_balance'
         const resolvedPaymentMethod: string | null = (() => {
           if (!pmObj) return null;
           const pmType = pmObj.type;
-          if (pmType === 'customer_balance') return 'bankÃ¼berweisung';
+          if (pmType === 'customer_balance') return 'banküberweisung';
           if (pmType === 'card' && card?.brand) return card.brand;
           return pmType || null;
         })();
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
                       ?? sessionAny.shipping
                       ?? null;
 
-        // Build address JSON from Stripe address (Stripe field names â†’ our format)
+        // Build address JSON from Stripe address (Stripe field names → our format)
         const buildAdresse = (
           addr: Stripe.Address | null | undefined,
           name: string | null | undefined,
@@ -195,8 +195,8 @@ export async function POST(request: NextRequest) {
           };
         };
 
-        // â”€â”€ Rechnungsadresse (billing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // Try multiple sources â€” API version and payment method affect where
+        // ── Rechnungsadresse (billing) ─────────────────────────────────────
+        // Try multiple sources — API version and payment method affect where
         // billing address lives:
         //   1. session.customer_details.address (standard)
         //   2. collected_information (Stripe API v20+)
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
           buildAdresse(collectedInfo?.address, customerName, customerPhone, customerEmailAddr as string) ??
           buildAdresse(billing?.address, billing?.name ?? customerName, customerPhone, customerEmailAddr as string);
 
-        // â”€â”€ Lieferadresse (shipping) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Lieferadresse (shipping) ───────────────────────────────────────
         const lieferAdresse = shipping?.address
           ? buildAdresse(shipping.address, shipping.name ?? customerName, customerPhone, customerEmailAddr as string)
           : rechnungsAdresse;
@@ -223,19 +223,19 @@ export async function POST(request: NextRequest) {
           console.warn(`[Webhook] No shipping address found for ${bestellungId}. shipping:`, shipping ? 'present' : 'absent');
         }
 
-        // â”€â”€ Resolve Stripe Customer ID (persisted for future invoices) â”€â”€â”€â”€â”€
+        // ── Resolve Stripe Customer ID (persisted for future invoices) ─────
         const stripeCustomerId = typeof session.customer === 'string'
           ? session.customer
           : (session.customer as any)?.id ?? null;
 
-        // â”€â”€ Determine status based on payment_status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Determine status based on payment_status ──────────────────────
         // For instant payments (card, paypal, etc.): payment_status === 'paid'
         // For delayed payments (bank transfer): payment_status === 'unpaid'
         const isPaid = session.payment_status === 'paid';
         const orderStatus = isPaid ? 'bezahlt' : 'warten_auf_zahlung';
 
         // Update order: status, customer data, Stripe references
-        // bestellt_am uses first-write-wins â€” fetch current value to avoid
+        // bestellt_am uses first-write-wins — fetch current value to avoid
         // overwriting the timestamp that the verify endpoint already set.
         const { data: currentOrder } = await supabase
           .from('bestellungen')
@@ -250,14 +250,14 @@ export async function POST(request: NextRequest) {
             stripe_payment_intent_id:  typeof session.payment_intent === 'string'
               ? session.payment_intent
               : pi?.id ?? (eventSession.payment_intent as string),
-            // Only set bestellt_am once â€” preserve whichever writer got here first
+            // Only set bestellt_am once — preserve whichever writer got here first
             ...(!currentOrder?.bestellt_am ? { bestellt_am: new Date().toISOString() } : {}),
             // Save address snapshots from Stripe (webhook is authoritative source)
             ...(rechnungsAdresse ? { rechnungsadresse_json: rechnungsAdresse } : {}),
             ...(lieferAdresse    ? { lieferadresse_json:    lieferAdresse    } : {}),
             // Save guest email
             ...(customerEmailAddr ? { gast_email: customerEmailAddr }         : {}),
-            // Save payment method (e.g. "visa", "paypal", "klarna", "bankÃ¼berweisung")
+            // Save payment method (e.g. "visa", "paypal", "klarna", "banküberweisung")
             ...(resolvedPaymentMethod ? { zahlungsmethode: resolvedPaymentMethod } : {}),
             // Save Stripe Customer ID (required for Phase 2 Invoices)
             ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}),
@@ -306,16 +306,16 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // â”€â”€ Send emails based on payment status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Send emails based on payment status ────────────────────────────
         if (isPaid) {
-          // Instant payment (card, PayPal, etc.) â€” send full confirmation + PDF
+          // Instant payment (card, PayPal, etc.) — send full confirmation + PDF
           await sendOrderConfirmationEmails(
             supabase, bestellungId, session,
             resolvedPaymentMethod, rechnungsAdresse, lieferAdresse,
           );
           console.log(`Order ${bestellungId} marked as bezahlt`);
         } else {
-          // Delayed payment (bank transfer) â€” send "Bestellung eingegangen" email
+          // Delayed payment (bank transfer) — send "Bestellung eingegangen" email
           // so the customer knows their order was placed successfully.
           // Full confirmation + PDF will follow when payment arrives
           // (checkout.session.async_payment_succeeded).
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
               kundenname: session.customer_details?.name ?? 'Kunde',
               bestellnummer: session.metadata?.bestellnummer ?? bestellungId,
               gesamt,
-              zahlungsmethode: 'BankÃ¼berweisung',
+              zahlungsmethode: 'Banküberweisung',
             });
 
             // 2. Notify admin about the new pending order
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
               bestellnummer: session.metadata?.bestellnummer ?? bestellungId,
               kundenname: session.customer_details?.name ?? 'Gast',
               kundenEmail: customerEmail,
-              gesamt: `${gesamt} (â³ BankÃ¼berweisung ausstehend)`,
+              gesamt: `${gesamt} (⏳ Banküberweisung ausstehend)`,
               lieferadresse: addrParts.join(', ') || undefined,
               items: lineItems?.map(i => ({
                 titel: i.titel,
@@ -362,13 +362,13 @@ export async function POST(request: NextRequest) {
             });
           }
 
-          console.log(`Order ${bestellungId} marked as ${orderStatus} â€” awaiting async payment (e.g. bank transfer). Customer + admin notified.`);
+          console.log(`Order ${bestellungId} marked as ${orderStatus} — awaiting async payment (e.g. bank transfer). Customer + admin notified.`);
         }
       }
       break;
     }
 
-    // â”€â”€ Delayed payment succeeded (bank transfer arrived) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Delayed payment succeeded (bank transfer arrived) ────────────────────
     case 'checkout.session.async_payment_succeeded': {
       const eventSession = event.data.object as Stripe.Checkout.Session;
       const bestellungId = eventSession.metadata?.bestellung_id;
@@ -383,11 +383,11 @@ export async function POST(request: NextRequest) {
         const pi = sessionAny.payment_intent as any;
         const pmObj = pi?.payment_method as Stripe.PaymentMethod | undefined;
         const resolvedPaymentMethod: string | null = (() => {
-          if (!pmObj) return 'bankÃ¼berweisung';
+          if (!pmObj) return 'banküberweisung';
           const pmType = pmObj.type;
-          if (pmType === 'customer_balance') return 'bankÃ¼berweisung';
+          if (pmType === 'customer_balance') return 'banküberweisung';
           if (pmType === 'card' && pmObj.card?.brand) return pmObj.card.brand;
-          return pmType || 'bankÃ¼berweisung';
+          return pmType || 'banküberweisung';
         })();
 
         // Update order to bezahlt
@@ -438,12 +438,12 @@ export async function POST(request: NextRequest) {
           (order?.lieferadresse_json as any) ?? null,
         );
 
-        console.log(`Order ${bestellungId} async payment succeeded â€” marked as bezahlt`);
+        console.log(`Order ${bestellungId} async payment succeeded — marked as bezahlt`);
       }
       break;
     }
 
-    // â”€â”€ Delayed payment failed (bank transfer never arrived / expired) â”€â”€â”€â”€â”€â”€â”€
+    // ── Delayed payment failed (bank transfer never arrived / expired) ───────
     case 'checkout.session.async_payment_failed': {
       const eventSession = event.data.object as Stripe.Checkout.Session;
       const bestellungId = eventSession.metadata?.bestellung_id;
@@ -478,7 +478,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // â”€â”€ Send failure notification to customer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Send failure notification to customer ────────────────────────
         const customerEmail =
           eventSession.customer_details?.email ?? (eventSession.customer_email as string | null);
         const resendKey = process.env.RESEND_API_KEY;
@@ -500,13 +500,13 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        console.error(`Order ${bestellungId} async payment FAILED â€” customer notified`);
+        console.error(`Order ${bestellungId} async payment FAILED — customer notified`);
       }
       break;
     }
 
-    // â”€â”€ Payment failed (card declined, PayPal failed, Revolut failed, etc.) â”€â”€â”€â”€
-    // This fires while the checkout session is still active â€” the customer can
+    // ── Payment failed (card declined, PayPal failed, Revolut failed, etc.) ────
+    // This fires while the checkout session is still active — the customer can
     // retry with a different payment method on Stripe's hosted page.
     // We record the failure attempt in our DB for tracking purposes.
     case 'payment_intent.payment_failed': {
@@ -540,14 +540,14 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        console.error(`[Webhook] Payment failed for order ${bestellungId}: ${failureCode} â€” ${failureMessage} (PI: ${paymentIntent.id})`);
+        console.error(`[Webhook] Payment failed for order ${bestellungId}: ${failureCode} — ${failureMessage} (PI: ${paymentIntent.id})`);
       } else {
-        console.error(`[Webhook] Payment failed: ${paymentIntent.id} â€” ${failureCode}: ${failureMessage} (no bestellung_id in metadata)`);
+        console.error(`[Webhook] Payment failed: ${paymentIntent.id} — ${failureCode}: ${failureMessage} (no bestellung_id in metadata)`);
       }
       break;
     }
 
-    // â”€â”€ Checkout session expired (customer gave up / session timed out) â”€â”€â”€â”€â”€â”€â”€
+    // ── Checkout session expired (customer gave up / session timed out) ───────
     // This fires when the Stripe Checkout session expires (default: 24h) without
     // completing. The customer might have failed payment and given up.
     // We mark the order as 'storniert' (cancelled) so the admin knows.
@@ -570,9 +570,9 @@ export async function POST(request: NextRequest) {
             .update({ status: 'storniert' })
             .eq('id', bestellungId);
 
-          console.log(`[Webhook] Checkout session expired â€” order ${bestellungId} marked as storniert`);
+          console.log(`[Webhook] Checkout session expired — order ${bestellungId} marked as storniert`);
         } else {
-          console.log(`[Webhook] Checkout session expired for order ${bestellungId} but status is '${order?.status}' â€” no change`);
+          console.log(`[Webhook] Checkout session expired for order ${bestellungId} but status is '${order?.status}' — no change`);
         }
 
         // Check if session has a recovery URL (from after_expiration.recovery)

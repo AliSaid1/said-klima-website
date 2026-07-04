@@ -23,7 +23,7 @@ interface SendEmailParams {
   attachments?: EmailAttachment[];
 }
 
-// â”€â”€â”€ Company info helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Company info helper ──────────────────────────────────
 async function getCompanyInfo() {
   const supabase = createAdminClient();
   const { data } = await supabase
@@ -38,25 +38,25 @@ async function getCompanyInfo() {
   };
 }
 
-// â”€â”€â”€ Consistent "from" and "reply-to" for all emails â”€â”€â”€â”€â”€â”€
+// ─── Consistent "from" and "reply-to" for all emails ──────
 function emailFrom(firmaName: string): string {
   return `${firmaName} <${COMPANY_EMAIL_FROM}>`;
 }
 const EMAIL_REPLY_TO = COMPANY_EMAIL_REPLY_TO;
 
-// â”€â”€â”€ Status label helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Status label helper ──────────────────────────────────
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
-    ausstehend: 'â³ Ausstehend',
-    bestaetigt: 'âœ… BestÃ¤tigt',
-    abgeschlossen: 'ðŸ Abgeschlossen',
-    abgesagt: 'âŒ Abgesagt',
-    nicht_erschienen: 'âš ï¸ Nicht erschienen',
+    ausstehend: '⏳ Ausstehend',
+    bestaetigt: '✅ Bestätigt',
+    abgeschlossen: '🏁 Abgeschlossen',
+    abgesagt: '❌ Abgesagt',
+    nicht_erschienen: '⚠️ Nicht erschienen',
   };
   return map[status] || status;
 }
 
-// â”€â”€â”€ Status color helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Status color helper ─────────────────────────────────
 function statusColor(status: string): string {
   const map: Record<string, string> = {
     ausstehend: '#EAB308',
@@ -68,7 +68,7 @@ function statusColor(status: string): string {
   return map[status] || '#64748B';
 }
 
-// â”€â”€â”€ Professional branded HTML email wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Professional branded HTML email wrapper ──────────────
 function emailWrapper(content: string, firma: { name: string; email: string; telefon: string }) {
   return `
 <!DOCTYPE html>
@@ -82,7 +82,7 @@ function emailWrapper(content: string, firma: { name: string; email: string; tel
         <tr><td style="background:linear-gradient(135deg,#1e3a5f,#2563EB);padding:28px 40px;text-align:center;">
           <img src="${COMPANY_LOGO_EMAIL}" alt="${firma.name}" width="180" style="display:block;margin:0 auto 12px;max-width:180px;height:auto;" />
           <p style="margin:0;color:rgba(255,255,255,0.7);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">
-            KÃ¤lte- &amp; Klimatechnik
+            Kälte- &amp; Klimatechnik
           </p>
         </td></tr>
         <!-- Content -->
@@ -96,7 +96,7 @@ function emailWrapper(content: string, firma: { name: string; email: string; tel
               <p style="margin:0 0 6px;color:#334155;font-size:14px;font-weight:700;">${firma.name}</p>
               <p style="margin:0 0 4px;color:#64748b;font-size:13px;">${COMPANY_ADDRESS}</p>
               <p style="margin:0 0 12px;color:#64748b;font-size:13px;">
-                ${firma.telefon ? `Tel: ${firma.telefon} Â· ` : ''}E-Mail: <a href="mailto:${COMPANY_EMAIL_REPLY_TO}" style="color:#2563EB;text-decoration:none;">${COMPANY_EMAIL_REPLY_TO}</a>
+                ${firma.telefon ? `Tel: ${firma.telefon} · ` : ''}E-Mail: <a href="mailto:${COMPANY_EMAIL_REPLY_TO}" style="color:#2563EB;text-decoration:none;">${COMPANY_EMAIL_REPLY_TO}</a>
               </p>
               <p style="margin:0 0 4px;">
                 <a href="${COMPANY_WEBSITE}" style="color:#2563EB;text-decoration:none;font-size:13px;font-weight:600;">${COMPANY_DOMAIN}</a>
@@ -208,8 +208,8 @@ export async function sendBookingConfirmation(params: {
   const firma = await getCompanyInfo();
 
   const content = `
-    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">Buchung eingegangen! ðŸŽ‰</h2>
-    <p style="margin:0 0 24px;color:#64748b;font-size:15px;">Hallo ${params.kundenname}, vielen Dank fÃ¼r Ihre Buchung.</p>
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">Buchung eingegangen! 🎉</h2>
+    <p style="margin:0 0 24px;color:#64748b;font-size:15px;">Hallo ${params.kundenname}, vielen Dank für Ihre Buchung.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;">
       <tr><td>
@@ -230,7 +230,7 @@ export async function sendBookingConfirmation(params: {
             <td style="color:#64748b;font-size:13px;font-weight:600;vertical-align:top;">Status</td>
             <td>
               <span style="display:inline-block;padding:4px 12px;background:#FEF3C7;color:#92400E;border-radius:20px;font-size:12px;font-weight:600;">
-                â³ Ausstehend
+                ⏳ Ausstehend
               </span>
             </td>
           </tr>
@@ -239,7 +239,7 @@ export async function sendBookingConfirmation(params: {
     </table>
 
     <p style="margin:0;color:#64748b;font-size:14px;">
-      Wir werden Ihre Buchung in KÃ¼rze bestÃ¤tigen. Sie erhalten eine weitere E-Mail, sobald der Status aktualisiert wird.
+      Wir werden Ihre Buchung in Kürze bestätigen. Sie erhalten eine weitere E-Mail, sobald der Status aktualisiert wird.
     </p>
   `;
 
@@ -248,7 +248,7 @@ export async function sendBookingConfirmation(params: {
       from: emailFrom(firma.name),
       replyTo: EMAIL_REPLY_TO,
       to: [params.to],
-      subject: `BuchungsbestÃ¤tigung â€” ${params.dienstleistung}`,
+      subject: `Buchungsbestätigung — ${params.dienstleistung}`,
       html: emailWrapper(content, firma),
     });
 
@@ -317,10 +317,10 @@ export async function sendOrderConfirmation(params: {
 
 /**
  * Send "Bestellung eingegangen" email to customer immediately after checkout
- * when payment is pending (e.g. BankÃ¼berweisung / bank transfer).
+ * when payment is pending (e.g. Banküberweisung / bank transfer).
  * This reassures the customer that their order was placed successfully,
  * even though payment hasn't been confirmed yet.
- * NO PDF attachment â€” that comes with the BestellbestÃ¤tigung after payment.
+ * NO PDF attachment — that comes with the Bestellbestätigung after payment.
  */
 export async function sendOrderReceivedEmail(params: {
   to: string;
@@ -348,15 +348,15 @@ export async function sendOrderReceivedEmail(params: {
   const firma = await getCompanyInfo();
 
   const content = `
-    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">ðŸ“¦ Bestellung eingegangen!</h2>
-    <p style="margin:0 0 16px;color:#64748b;font-size:15px;">Hallo ${params.kundenname}, vielen Dank fÃ¼r Ihre Bestellung!</p>
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">📦 Bestellung eingegangen!</h2>
+    <p style="margin:0 0 16px;color:#64748b;font-size:15px;">Hallo ${params.kundenname}, vielen Dank für Ihre Bestellung!</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:20px;margin-bottom:24px;">
       <tr><td>
         <table width="100%" cellpadding="8" cellspacing="0">
           <tr>
             <td colspan="2" style="color:#92400E;font-size:14px;font-weight:700;padding-bottom:12px;">
-              â³ Zahlung ausstehend â€” ${params.zahlungsmethode}
+              ⏳ Zahlung ausstehend — ${params.zahlungsmethode}
             </td>
           </tr>
           <tr>
@@ -376,9 +376,9 @@ export async function sendOrderReceivedEmail(params: {
     </table>
 
     <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6;">
-      Bitte Ã¼berweisen Sie den Betrag an die in der Checkout-Seite angegebene Bankverbindung.
-      Sobald Ihre Zahlung eingegangen ist (in der Regel 1â€“5 Werktage), erhalten Sie automatisch
-      Ihre BestellbestÃ¤tigung mit PDF per E-Mail.
+      Bitte überweisen Sie den Betrag an die in der Checkout-Seite angegebene Bankverbindung.
+      Sobald Ihre Zahlung eingegangen ist (in der Regel 1–5 Werktage), erhalten Sie automatisch
+      Ihre Bestellbestätigung mit PDF per E-Mail.
     </p>
 
     <p style="margin:0;color:#64748b;font-size:13px;">
@@ -393,7 +393,7 @@ export async function sendOrderReceivedEmail(params: {
       from: emailFrom(firma.name),
       replyTo: EMAIL_REPLY_TO,
       to: [params.to],
-      subject: `Bestellung eingegangen â€” #${params.bestellnummer}`,
+      subject: `Bestellung eingegangen — #${params.bestellnummer}`,
       html: emailWrapper(content, firma),
     });
 
@@ -436,11 +436,11 @@ export async function sendPaymentFailedEmail(params: {
   const firma = await getCompanyInfo();
 
   const content = `
-    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">âŒ Zahlung fehlgeschlagen</h2>
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">❌ Zahlung fehlgeschlagen</h2>
     <p style="margin:0 0 16px;color:#64748b;font-size:15px;">Hallo ${params.kundenname},</p>
 
     <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6;">
-      leider ist die Zahlung fÃ¼r Ihre Bestellung nicht eingegangen oder konnte nicht verarbeitet werden.
+      leider ist die Zahlung für Ihre Bestellung nicht eingegangen oder konnte nicht verarbeitet werden.
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -463,8 +463,8 @@ export async function sendPaymentFailedEmail(params: {
     </table>
 
     <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6;">
-      MÃ¶chten Sie es erneut versuchen? Besuchen Sie unseren Shop und legen Sie die Artikel
-      erneut in den Warenkorb, oder kontaktieren Sie uns fÃ¼r UnterstÃ¼tzung.
+      Möchten Sie es erneut versuchen? Besuchen Sie unseren Shop und legen Sie die Artikel
+      erneut in den Warenkorb, oder kontaktieren Sie uns für Unterstützung.
     </p>
 
     <p style="margin:0;color:#64748b;font-size:13px;">
@@ -479,7 +479,7 @@ export async function sendPaymentFailedEmail(params: {
       from: emailFrom(firma.name),
       replyTo: EMAIL_REPLY_TO,
       to: [params.to],
-      subject: `Zahlung fehlgeschlagen â€” Bestellung #${params.bestellnummer}`,
+      subject: `Zahlung fehlgeschlagen — Bestellung #${params.bestellnummer}`,
       html: emailWrapper(content, firma),
     });
 
@@ -512,10 +512,10 @@ export async function sendBookingStatusEmail(params: {
   let statusMessage = '';
   switch (params.neuerStatus) {
     case 'bestaetigt':
-      statusMessage = 'Ihr Termin wurde bestÃ¤tigt. Wir freuen uns auf Sie!';
+      statusMessage = 'Ihr Termin wurde bestätigt. Wir freuen uns auf Sie!';
       break;
     case 'abgeschlossen':
-      statusMessage = 'Ihr Termin wurde als abgeschlossen markiert. Vielen Dank fÃ¼r Ihr Vertrauen!';
+      statusMessage = 'Ihr Termin wurde als abgeschlossen markiert. Vielen Dank für Ihr Vertrauen!';
       break;
     case 'abgesagt':
       statusMessage = 'Ihr Termin wurde leider abgesagt. Bitte kontaktieren Sie uns bei Fragen.';
@@ -566,7 +566,7 @@ export async function sendBookingStatusEmail(params: {
       from: emailFrom(firma.name),
       replyTo: EMAIL_REPLY_TO,
       to: [params.to],
-      subject: `Termin ${label} â€” ${params.dienstleistung}`,
+      subject: `Termin ${label} — ${params.dienstleistung}`,
       html: emailWrapper(content, firma),
     });
 
@@ -597,7 +597,7 @@ export async function sendNewBookingNotification(params: {
   const supabase = createAdminClient();
 
   const content = `
-    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">ðŸ“… Neue Buchung eingegangen!</h2>
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">📅 Neue Buchung eingegangen!</h2>
     <p style="margin:0 0 24px;color:#64748b;font-size:15px;">Ein Kunde hat einen neuen Termin gebucht.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -632,11 +632,11 @@ export async function sendNewBookingNotification(params: {
     </table>
 
     <p style="margin:0;color:#64748b;font-size:14px;">
-      Bitte prÃ¼fen Sie die Buchung im Admin-Dashboard und bestÃ¤tigen oder lehnen Sie den Termin ab.
+      Bitte prüfen Sie die Buchung im Admin-Dashboard und bestätigen oder lehnen Sie den Termin ab.
     </p>
   `;
 
-  const subject = `Neue Buchung: ${params.dienstleistung} â€” ${params.datum}`;
+  const subject = `Neue Buchung: ${params.dienstleistung} — ${params.datum}`;
   const html = emailWrapper(content, firma);
 
   const emailPromises: Promise<{ success: boolean; error?: string }>[] = [];
@@ -683,7 +683,7 @@ export async function sendNewBookingNotification(params: {
           from: emailFrom(firma.name),
           replyTo: EMAIL_REPLY_TO,
           to: [tech.kontakt_email],
-          subject: `Neuer Termin zugewiesen: ${params.dienstleistung} â€” ${params.datum}`,
+          subject: `Neuer Termin zugewiesen: ${params.dienstleistung} — ${params.datum}`,
           html,
         }).then(({ error }) => {
           if (error) console.error('[EMAIL] Technician notify failed:', error);
@@ -700,9 +700,9 @@ export async function sendNewBookingNotification(params: {
   return { success: true };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// NEW ORDER â†’ ADMIN NOTIFICATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
+// NEW ORDER → ADMIN NOTIFICATION
+// ═══════════════════════════════════════════════════════════
 
 /**
  * Notify company (info@ + DB admins) about a new order.
@@ -727,13 +727,13 @@ export async function sendNewOrderNotification(params: {
             ${i.titel}${i.artikelnummer ? `<br/><span style="color:#64748b;font-size:12px;">Art.Nr: ${i.artikelnummer}</span>` : ''}
           </td>
           <td style="color:#1e293b;font-size:14px;padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:center;">${i.menge}</td>
-          <td style="color:#1e293b;font-size:14px;padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${(i.preis_brutto * i.menge).toFixed(2)} â‚¬</td>
+          <td style="color:#1e293b;font-size:14px;padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${(i.preis_brutto * i.menge).toFixed(2)} €</td>
         </tr>`
       ).join('')
     : '';
 
   const content = `
-    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">ðŸ›’ Neue Bestellung eingegangen!</h2>
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">🛒 Neue Bestellung eingegangen!</h2>
     <p style="margin:0 0 24px;color:#64748b;font-size:15px;">Ein Kunde hat soeben eine Bestellung aufgegeben.</p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px;padding:20px;margin-bottom:24px;">
@@ -780,7 +780,7 @@ export async function sendNewOrderNotification(params: {
     </p>
   `;
 
-  const subject = `Neue Bestellung #${params.bestellnummer} â€” ${params.gesamt}`;
+  const subject = `Neue Bestellung #${params.bestellnummer} — ${params.gesamt}`;
   const html = emailWrapper(content, firma);
 
   // Send to info@ (always) + any DB admin users
@@ -805,7 +805,7 @@ export async function sendNewOrderNotification(params: {
   const adminOnly = recipients.filter(e => e.toLowerCase() !== customerLower);
 
   if (adminOnly.length === 0) {
-    console.warn('[EMAIL] No admin recipients after excluding customer â€” skipping admin notification');
+    console.warn('[EMAIL] No admin recipients after excluding customer — skipping admin notification');
     return { success: true };
   }
 
@@ -839,9 +839,9 @@ export async function sendNewOrderNotification(params: {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 // CONTACT FORM EMAILS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════
 
 /**
  * Send contact form emails:
@@ -864,10 +864,10 @@ export async function sendContactEmails(params: {
   const companyInfo = await getCompanyInfo();
   const fullName = `${params.vorname} ${params.nachname}`;
 
-  // â”€â”€ 1. Internal notification to company â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const isAngebot = params.interesse.includes('Angebot') || params.interesse.includes('KlimagerÃ¤t');
+  // ── 1. Internal notification to company ──────────────────
+  const isAngebot = params.interesse.includes('Angebot') || params.interesse.includes('Klimagerät');
 
-  // Build detail rows dynamically â€” only show filled fields
+  // Build detail rows dynamically — only show filled fields
   const detailRows: { label: string; value: string; highlight?: boolean }[] = [
     { label: 'Art der Anfrage', value: params.interesse, highlight: true },
     { label: 'Name', value: fullName },
@@ -876,8 +876,8 @@ export async function sendContactEmails(params: {
   if (params.telefon) detailRows.push({ label: 'Telefon', value: params.telefon });
   if (params.firma) detailRows.push({ label: 'Firma', value: params.firma });
   if (params.produktName) detailRows.push({ label: 'Produkt', value: params.produktName });
-  if (params.raeume) detailRows.push({ label: 'RÃ¤ume', value: params.raeume });
-  if (params.flaeche) detailRows.push({ label: 'FlÃ¤che', value: `${params.flaeche} mÂ²` });
+  if (params.raeume) detailRows.push({ label: 'Räume', value: params.raeume });
+  if (params.flaeche) detailRows.push({ label: 'Fläche', value: `${params.flaeche} m²` });
   if (params.standort) detailRows.push({ label: 'Standort', value: params.standort });
 
   const detailRowsHtml = detailRows.map((r, i) => `
@@ -894,7 +894,7 @@ export async function sendContactEmails(params: {
   const internContent = `
     <div style="margin-bottom:8px;">
       <span style="display:inline-block;padding:4px 12px;background:${isAngebot ? '#dbeafe' : '#e0e7ff'};color:${isAngebot ? '#1d4ed8' : '#4338ca'};border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
-        ${isAngebot ? 'ðŸ’° Angebotsanfrage' : 'ðŸ“© Allgemeine Anfrage'}
+        ${isAngebot ? '💰 Angebotsanfrage' : '📩 Allgemeine Anfrage'}
       </span>
     </div>
     <h2 style="margin:12px 0 4px;color:#111827;font-size:22px;font-weight:800;line-height:1.3;">Neue Anfrage von ${fullName}</h2>
@@ -917,7 +917,7 @@ export async function sendContactEmails(params: {
       <tr>
         <td style="padding:14px 20px;background:linear-gradient(135deg,#1e3a5f,#2563EB);border-radius:10px;text-align:center;">
           <a href="mailto:${params.email}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">
-            âœ‰ï¸&nbsp; Direkt antworten an ${params.vorname}
+            ✉️&nbsp; Direkt antworten an ${params.vorname}
           </a>
         </td>
       </tr>
@@ -925,16 +925,16 @@ export async function sendContactEmails(params: {
   `;
 
   const internSubject = isAngebot
-    ? `Angebotsanfrage von ${fullName} â€” ${params.produktName || params.interesse}`
-    : `Neue Anfrage von ${fullName} â€” ${params.interesse}`;
+    ? `Angebotsanfrage von ${fullName} — ${params.produktName || params.interesse}`
+    : `Neue Anfrage von ${fullName} — ${params.interesse}`;
 
-  // â”€â”€ 2. Customer confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── 2. Customer confirmation ─────────────────────────────
   const kundenDetailRows: { label: string; value: string }[] = [
     { label: 'Ihre Anfrage', value: params.interesse },
   ];
   if (params.produktName) kundenDetailRows.push({ label: 'Produkt', value: params.produktName });
-  if (params.raeume) kundenDetailRows.push({ label: 'RÃ¤ume', value: params.raeume });
-  if (params.flaeche) kundenDetailRows.push({ label: 'FlÃ¤che', value: `${params.flaeche} mÂ²` });
+  if (params.raeume) kundenDetailRows.push({ label: 'Räume', value: params.raeume });
+  if (params.flaeche) kundenDetailRows.push({ label: 'Fläche', value: `${params.flaeche} m²` });
 
   const kundenDetailHtml = kundenDetailRows.map((r, i) => `
     <tr>
@@ -950,8 +950,8 @@ export async function sendContactEmails(params: {
   const kundenContent = `
     <h2 style="margin:0 0 6px;color:#111827;font-size:22px;font-weight:800;line-height:1.3;">Vielen Dank, ${params.vorname}!</h2>
     <p style="margin:0 0 28px;color:#6b7280;font-size:15px;line-height:1.7;">
-      Wir haben Ihre Anfrage erhalten und werden uns schnellstmÃ¶glich bei Ihnen melden.
-      In der Regel antworten wir innerhalb von <strong style="color:#374151;">1â€“2 Werktagen</strong>.
+      Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.
+      In der Regel antworten wir innerhalb von <strong style="color:#374151;">1–2 Werktagen</strong>.
     </p>
 
     <p style="margin:0 0 10px;color:#374151;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;">Zusammenfassung</p>
@@ -969,12 +969,12 @@ export async function sendContactEmails(params: {
   `;
 
   const kundenSubject = isAngebot
-    ? `Ihre Angebotsanfrage â€” ${companyInfo.name}`
-    : `Ihre Anfrage â€” ${companyInfo.name}`;
+    ? `Ihre Angebotsanfrage — ${companyInfo.name}`
+    : `Ihre Anfrage — ${companyInfo.name}`;
 
-  // â”€â”€ Send both emails â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Send both emails ─────────────────────────────────────
   const results = await Promise.allSettled([
-    // Internal â†’ company
+    // Internal → company
     getResend().emails.send({
       from: emailFrom(companyInfo.name),
       replyTo: params.email,  // reply goes directly to the customer
@@ -982,7 +982,7 @@ export async function sendContactEmails(params: {
       subject: internSubject,
       html: emailWrapper(internContent, companyInfo),
     }),
-    // Confirmation â†’ customer
+    // Confirmation → customer
     getResend().emails.send({
       from: emailFrom(companyInfo.name),
       replyTo: EMAIL_REPLY_TO,

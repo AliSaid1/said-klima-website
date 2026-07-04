@@ -8,18 +8,18 @@ import { sanitizeText } from '@/lib/sanitize';
 
 interface CartItem {
   artikel_id: string;
-  variant_id?: string;   // variant name string â€” used to look up preis_aufschlag in DB
+  variant_id?: string;   // variant name string — used to look up preis_aufschlag in DB
   menge: number;
 }
 
-// POST /api/checkout â€” Create Stripe Checkout Session
+// POST /api/checkout — Create Stripe Checkout Session
 // H-4: Idempotency key added so duplicate requests don't create duplicate sessions.
-// H-5: Prices are fetched server-side from the DB â€” client-supplied prices are IGNORED.
+// H-5: Prices are fetched server-side from the DB — client-supplied prices are IGNORED.
 export async function POST(request: NextRequest) {
   // Body size guard
   const contentLength = Number(request.headers.get('content-length') ?? 0);
   if (contentLength > 16_384) {
-    return NextResponse.json({ error: 'Anfrage zu groÃŸ' }, { status: 413 });
+    return NextResponse.json({ error: 'Anfrage zu groß' }, { status: 413 });
   }
 
   const supabase    = await createClient();
@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
   // Validate each artikel_id is a UUID to prevent injection
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!items.every((i) => typeof i.artikel_id === 'string' && uuidRe.test(i.artikel_id))) {
-    return NextResponse.json({ error: 'UngÃ¼ltige Artikel-IDs' }, { status: 400 });
+    return NextResponse.json({ error: 'Ungültige Artikel-IDs' }, { status: 400 });
   }
   if (!items.every((i) => Number.isInteger(i.menge) && i.menge >= 1 && i.menge <= 999)) {
-    return NextResponse.json({ error: 'UngÃ¼ltige Mengenangaben' }, { status: 400 });
+    return NextResponse.json({ error: 'Ungültige Mengenangaben' }, { status: 400 });
   }
 
-  // â”€â”€ H-5: Fetch prices from DB â€” never trust client-supplied prices â”€â”€â”€â”€â”€â”€â”€
+  // ── H-5: Fetch prices from DB — never trust client-supplied prices ───────
   const articleIds = items.map((i) => i.artikel_id);
   const { data: dbArtikels, error: artikelErr } = await adminClient
     .from('artikel')
@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
   for (const item of items) {
     const art = artikelMap.get(item.artikel_id);
     if (!art) return NextResponse.json({ error: `Artikel ${item.artikel_id} nicht gefunden` }, { status: 400 });
-    if (!art.aktiv) return NextResponse.json({ error: `Artikel "${art.titel}" ist nicht verfÃ¼gbar` }, { status: 400 });
+    if (!art.aktiv) return NextResponse.json({ error: `Artikel "${art.titel}" ist nicht verfügbar` }, { status: 400 });
   }
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Build verified line items using DB prices + variant surcharges
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
       ? Number(art.rabattpreis)
       : Number(art.preis_brutto);
 
-    // Apply variant surcharge from DB JSONB â€” client cannot manipulate this
+    // Apply variant surcharge from DB JSONB — client cannot manipulate this
     if (item.variant_id) {
       const varianten: Array<{ name: string; preis_aufschlag: number }> =
         Array.isArray(art.varianten) ? art.varianten : [];
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const titel = item.variant_id
-      ? sanitizeText(`${art.titel} â€“ ${item.variant_id}`, 500)
+      ? sanitizeText(`${art.titel} – ${item.variant_id}`, 500)
       : sanitizeText(art.titel, 500);
 
     // Resolve first product image for Stripe Checkout display
@@ -113,10 +113,10 @@ export async function POST(request: NextRequest) {
 
   const bestellnummer  = `BS-${Date.now().toString(36).toUpperCase()}`;
   const zwischensumme  = verifiedItems.reduce((s, i) => s + i.preis_brutto * i.menge, 0);
-  // Prices are GROSS (incl. 19% VAT) â€” extract VAT using gross Ã— (19/119)
+  // Prices are GROSS (incl. 19% VAT) — extract VAT using gross × (19/119)
   const steuer         = Math.round(zwischensumme * (19 / 119) * 100) / 100;
 
-  // Fetch shipping settings from DB â€” admin-configurable via /admin/settings
+  // Fetch shipping settings from DB — admin-configurable via /admin/settings
   const { data: shippingSettings } = await adminClient
     .from('firmeneinstellungen')
     .select('versandkosten, versandkostenlos_ab')
@@ -125,16 +125,16 @@ export async function POST(request: NextRequest) {
   const versandSatz   = Number(shippingSettings?.versandkosten       ?? 5);
   const versandGratis = Number(shippingSettings?.versandkostenlos_ab ?? 500);
 
-  // Free shipping for orders â‰¥ versandkostenlos_ab, else flat versandSatz
+  // Free shipping for orders ≥ versandkostenlos_ab, else flat versandSatz
   const versand = zwischensumme >= versandGratis ? 0 : versandSatz;
   const gesamt  = zwischensumme + versand;
 
   // Get optional authenticated user (user client for auth only)
   const { data: { user } } = await supabase.auth.getUser();
 
-  // â”€â”€ Create or reuse a Stripe Customer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // ALWAYS create a customer â€” even for guests without email.
-  // Stripe requires a Customer object for BankÃ¼berweisung (bank transfer).
+  // ── Create or reuse a Stripe Customer ────────────────────────────────────
+  // ALWAYS create a customer — even for guests without email.
+  // Stripe requires a Customer object for Banküberweisung (bank transfer).
   // Stripe docs: "Enabling bank transfers on the checkout page requires
   // specifying the customer in the checkout session."
   const customerEmail = kunden_email || user?.email || undefined;
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3) Create a new Stripe Customer if none found â€” even without email (for guests).
+    // 3) Create a new Stripe Customer if none found — even without email (for guests).
     //    Stripe Checkout will collect the email during the session and attach it.
     if (!stripeCustomerId) {
       const stripeCustomer = await getStripe().customers.create({
@@ -175,9 +175,9 @@ export async function POST(request: NextRequest) {
     // Non-fatal: if customer creation fails, session will use customer_email fallback
     console.error('[Checkout] Failed to create/find Stripe Customer:', custErr);
   }
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // â”€â”€ All DB writes use adminClient (service_role) â€” bypasses RLS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── All DB writes use adminClient (service_role) — bypasses RLS ──────────
   // The checkout route is server-only. RLS write policies on bestellungen /
   // bestellpositionen were removed by migration 012; service_role is the
   // correct and only path for server-side inserts into these tables.
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
 
   if (bestellError) return apiServerError(bestellError.message);
 
-  // einzelpreis_netto is NOT NULL â€” calculate from preis_brutto / (1 + steuersatz)
+  // einzelpreis_netto is NOT NULL — calculate from preis_brutto / (1 + steuersatz)
   await adminClient.from('bestellpositionen').insert(
     verifiedItems.map((item) => ({
       bestellung_id:     bestellung.id,
@@ -215,28 +215,28 @@ export async function POST(request: NextRequest) {
       artikelnummer:     item.artikelnummer ?? null,    // save product article number
     }))
   );
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─────────────────────────────────────────────────────────────────────────
 
   const origin         = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   // H-4: Idempotency key prevents duplicate Stripe sessions on retried requests
   const idempotencyKey = `checkout-${bestellung.id}`;
 
   // Build session params.
-  // No payment_method_types â†’ Stripe dynamically shows all methods enabled in the
+  // No payment_method_types → Stripe dynamically shows all methods enabled in the
   // Dashboard for the customer's location (Card, Link, Apple Pay, Google Pay, etc.)
   const sessionParams = {
     mode: 'payment' as const,
     // Collect billing address + phone from every customer (logged-in or guest)
     billing_address_collection: 'required' as const,
     phone_number_collection: { enabled: true },
-    // Collect separate shipping address â€” customer may have different delivery address
+    // Collect separate shipping address — customer may have different delivery address
     shipping_address_collection: {
       allowed_countries: ['DE', 'AT', 'CH'] as Stripe.Checkout.SessionCreateParams.ShippingAddressCollection.AllowedCountry[],
     },
     line_items: [
       ...verifiedItems.map((item) => {
-        // Description: only Art.-Nr. â€” variant is already in the name,
-        // and Stripe natively shows "je XX,XX â‚¬" for multi-quantity items.
+        // Description: only Art.-Nr. — variant is already in the name,
+        // and Stripe natively shows "je XX,XX €" for multi-quantity items.
         const description = item.artikelnummer
           ? `Art.-Nr.: ${item.artikelnummer}`
           : undefined;
@@ -265,13 +265,13 @@ export async function POST(request: NextRequest) {
         },
       },
     ],
-    // Pass Stripe Customer (required for BankÃ¼berweisung).
+    // Pass Stripe Customer (required for Banküberweisung).
     // Falls back to customer_email if Customer creation failed.
     ...(stripeCustomerId
       ? { customer: stripeCustomerId }
       : { customer_email: customerEmail || undefined }),
-    // Configure bank transfer options â€” Stripe uses this when the customer
-    // selects BankÃ¼berweisung on the hosted Checkout page.
+    // Configure bank transfer options — Stripe uses this when the customer
+    // selects Banküberweisung on the hosted Checkout page.
     payment_method_options: {
       customer_balance: {
         funding_type: 'bank_transfer' as const,

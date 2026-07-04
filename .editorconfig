@@ -1,0 +1,11 @@
+root = true
+
+# Enforce UTF-8 everywhere to prevent double-encoding (mojibake) of German
+# umlauts and typographic punctuation. See scripts/check-encoding.mjs.
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[*.{md,txt}]
+trim_trailing_whitespace = false
