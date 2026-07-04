@@ -11,6 +11,7 @@ CI, and the optional next steps for expanding coverage.
 | Item | Value |
 | --- | --- |
 | Runner | `@playwright/test` |
+| Suite size | **77 tests across 15 spec files** |
 | Config | [`playwright.config.ts`](../../playwright.config.ts) |
 | Test dir | [`tests/`](../../tests) |
 | Browsers | Chromium, Firefox, WebKit, Mobile Chrome (Pixel 5), Mobile Safari (iPhone 12) |

@@ -282,8 +282,14 @@ This approach delivered three concrete benefits:
   using the Supabase Management API.
 - **Performance** — ISR on legal pages, lazy-loaded heavy editors, `React.memo` on admin
   chrome, image optimization.
-- **Automated testing** — Playwright E2E specs (e.g. address management, upload flows).
-- **CI-ready config** — ESLint flat config, Playwright config, Vercel cron config.
+- **Automated testing** — a **Playwright E2E suite of 77 tests across 15 spec files**,
+  organized by business criticality (payments, security → high-value flows → public smoke).
+  Heavily covers the payment path: signed Stripe webhooks, server-side price integrity,
+  checkout validation. See [`docs/tests/E2E_TESTING.md`](docs/tests/E2E_TESTING.md).
+- **Continuous Integration** — GitHub Actions ([`.github/workflows/e2e.yml`](.github/workflows/e2e.yml))
+  seeds an **isolated test database**, builds the app, and runs the full suite on every
+  push/PR to `main` & `develop`. Setup documented in [`docs/tests/CI_SETUP.md`](docs/tests/CI_SETUP.md).
+- **Config-as-code** — ESLint flat config, Playwright config, Vercel cron config.
 - **Internationalization mindset** — German UI labels with English code identifiers,
   correct VAT/gross-price math.
 
