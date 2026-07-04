@@ -1,3 +1,11 @@
+/**
+ * Server-only Stripe SDK singleton.
+ *
+ * Exposes a lazily-initialised Stripe client so the SDK is never constructed at
+ * module load. This matters because `next build` evaluates API route modules
+ * while collecting page data, and eagerly reading `STRIPE_SECRET_KEY` there
+ * would fail builds in environments where the key is intentionally absent.
+ */
 import 'server-only';
 import Stripe from 'stripe';
 
@@ -7,6 +15,12 @@ import Stripe from 'stripe';
 // request time if the key is genuinely missing in production.
 let client: Stripe | null = null;
 
+/**
+ * Return the shared Stripe client, constructing it on first call.
+ *
+ * @returns The initialised Stripe SDK instance, pinned to a specific API version.
+ * @throws {Error} If `STRIPE_SECRET_KEY` is not set in the environment.
+ */
 export function getStripe(): Stripe {
   if (!client) {
     const key = process.env.STRIPE_SECRET_KEY;

@@ -1,3 +1,11 @@
+/**
+ * Resend email SDK singleton.
+ *
+ * Exposes a lazily-initialised Resend client. Construction is deferred until the
+ * first send so a missing `RESEND_API_KEY` never breaks `next build` (which
+ * evaluates API route modules while collecting page data). A genuinely missing
+ * key still throws at request time.
+ */
 import { Resend } from 'resend';
 
 // Lazily construct the Resend client on first use rather than at module load.
@@ -6,6 +14,12 @@ import { Resend } from 'resend';
 // whenever RESEND_API_KEY isn't present in the build environment.
 let client: Resend | null = null;
 
+/**
+ * Return the shared Resend client, constructing it on first call.
+ *
+ * @returns The initialised Resend SDK instance.
+ * @throws {Error} If `RESEND_API_KEY` is not set in the environment.
+ */
 export function getResend(): Resend {
   if (!client) {
     const key = process.env.RESEND_API_KEY;

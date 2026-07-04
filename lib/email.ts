@@ -1,3 +1,15 @@
+/**
+ * Transactional email service.
+ *
+ * Builds and sends every customer- and admin-facing email (booking
+ * confirmations/reminders, order confirmations, payment-failed notices, contact
+ * form messages, etc.) via Resend. Each sender first attempts a DB-managed
+ * template from the `email_vorlagen` table and falls back to a branded inline
+ * HTML template when none exists. Company details are resolved from
+ * `firmeneinstellungen` with static {@link module:lib/branding} constants as a
+ * fallback. Senders are designed to be fire-and-forget: failures are logged and
+ * swallowed so they never block the originating request.
+ */
 import { getResend } from '@/lib/resend';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {

@@ -1,3 +1,10 @@
+/**
+ * Centralised brand constants (company name, logo assets, contact details).
+ *
+ * Single source of truth for text and asset paths reused across the site UI,
+ * PDFs and transactional emails. Email-facing values must use absolute public
+ * URLs because email clients cannot resolve relative/localhost paths.
+ */
 // Centralized branding variables
 export const COMPANY_NAME = 'KÄLTE-UND KLIMATECHNIK SAID';
 export const COMPANY_NAME_DISPLAY = 'KÄLTE-UND KLIMATECHNIK SAID';

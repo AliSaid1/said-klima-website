@@ -1,4 +1,11 @@
-﻿export const products = [
+﻿/**
+ * Legacy static demo catalogue (products & services).
+ *
+ * Hard-coded placeholder data from the pre-database prototype. It is no longer
+ * imported by any runtime code (the live catalogue is served from Supabase) and
+ * is retained only for reference. Do not wire this into new features.
+ */
+export const products = [
   {
     id: '1',
     name: 'Daikin Sensira',
