@@ -40,6 +40,25 @@ test.describe('Stripe webhook', () => {
     expect(res.status()).toBe(400);
   });
 
+  test('accepts a signed event of an unhandled type without side effects (200)', async ({ request }) => {
+    test.skip(!stripeConfigured(), 'STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not set');
+
+    // A correctly-signed event whose type we don't handle must still be
+    // acknowledged with 200 so Stripe doesn't retry it forever.
+    const payload = checkoutEvent('payment_intent.created', {
+      id: `pi_test_${Date.now()}`,
+    });
+    const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': signWebhook(payload),
+      },
+      data: payload,
+    });
+    expect(res.ok()).toBeTruthy();
+    expect((await res.json()).received).toBe(true);
+  });
+
   test('async_payment_failed marks the order as fehlgeschlagen', async ({ request }) => {
     test.skip(
       !stripeConfigured() || !serviceConfigured(),

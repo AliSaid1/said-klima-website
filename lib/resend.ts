@@ -6,7 +6,7 @@ import { Resend } from 'resend';
 // whenever RESEND_API_KEY isn't present in the build environment.
 let client: Resend | null = null;
 
-function getClient(): Resend {
+export function getResend(): Resend {
   if (!client) {
     const key = process.env.RESEND_API_KEY;
     if (!key) throw new Error('RESEND_API_KEY is not set');
@@ -14,12 +14,4 @@ function getClient(): Resend {
   }
   return client;
 }
-
-export const resend = new Proxy({} as Resend, {
-  get(_target, prop) {
-    const c = getClient();
-    const value = Reflect.get(c, prop, c);
-    return typeof value === 'function' ? value.bind(c) : value;
-  },
-});
 

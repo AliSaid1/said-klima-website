@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { generateOrderConfirmationPdf } from '@/lib/pdf';
 import type { OrderPdfData } from '@/lib/pdf';
 
@@ -24,8 +24,8 @@ export async function GET(
   }
 
   try {
-    // ── 1. Verify the Stripe session matches this order ──────────────
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    // â”€â”€ 1. Verify the Stripe session matches this order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const session = await getStripe().checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent.payment_method'],
     });
 
@@ -34,10 +34,10 @@ export async function GET(
     }
 
     if (session.metadata?.bestellung_id !== bestellungId) {
-      return NextResponse.json({ error: 'Sitzung stimmt nicht mit Bestellung überein' }, { status: 403 });
+      return NextResponse.json({ error: 'Sitzung stimmt nicht mit Bestellung Ã¼berein' }, { status: 403 });
     }
 
-    // ── 2. Fetch order + line items from DB ──────────────────────────
+    // â”€â”€ 2. Fetch order + line items from DB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const supabase = createAdminClient();
 
     const { data: order, error: orderErr } = await supabase
@@ -56,14 +56,14 @@ export async function GET(
       .eq('bestellung_id', bestellungId)
       .order('erstellt_am', { ascending: true });
 
-    // ── 3. Extract payment method from Stripe ────────────────────────
+    // â”€â”€ 3. Extract payment method from Stripe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const sessionAny = session as any;
     const pi = sessionAny.payment_intent;
     const card = (typeof pi === 'object' && pi?.payment_method)
       ? (pi.payment_method as any)?.card
       : null;
 
-    // ── 4. Build PDF data and generate ───────────────────────────────
+    // â”€â”€ 4. Build PDF data and generate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const pdfData: OrderPdfData = {
       bestellnummer: order.bestellnummer,
       bestellt_am: order.bestellt_am ?? new Date().toISOString(),
@@ -91,7 +91,7 @@ export async function GET(
 
     const pdfBuffer = await generateOrderConfirmationPdf(pdfData);
 
-    // ── 5. Return PDF as a downloadable response ─────────────────────
+    // â”€â”€ 5. Return PDF as a downloadable response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {

@@ -54,10 +54,25 @@ Skips unless `TEST_EMAIL` / `TEST_PASSWORD` are set. Covers:
 - Also verifies the empty-cart state.
 
 ### `tests/checkout-ui.spec.ts` — checkout → Stripe (gated on `STRIPE_SECRET_KEY`)
-- Adds a product to the cart and asserts **"Zur Kasse"** redirects to Stripe's
-  hosted checkout (`checkout.stripe.com`). Stops there — payment happens on
-  Stripe and completes via webhook.
+- Adds a product to the cart, clicks **"Zur Kasse"**, and asserts that
+  `POST /api/checkout` returns `200` with a `checkout.stripe.com` session URL.
+  It asserts on the **API response** (via `page.waitForResponse`) rather than
+  navigating to Stripe's external page, so it isn't flaky on a slow Stripe load
+  and it surfaces the server error body if session creation fails. Payment
+  completes via webhook.
 - Skips when `STRIPE_SECRET_KEY` is unset (a Checkout Session can't be created).
+
+### `tests/checkout-validation.spec.ts` — checkout input validation (gated on `SUPABASE_SERVICE_ROLE_KEY`)
+Guards the payment entry point. Every case is rejected with a `4xx` **before**
+any Stripe call, so no Stripe key is needed — only the service role (the route
+builds an admin client up front). Covers:
+- empty cart → `400`,
+- more than 50 items → `400`,
+- a non-UUID `artikel_id` → `400` (**this is exactly the class of bug the v4
+  UUID seed fix addressed** — see §5 gotcha),
+- an invalid quantity (`menge: 0`) → `400`,
+- a syntactically-valid v4 UUID that isn't a real article → `400 nicht gefunden`
+  (arbitrary IDs must never create a session).
 
 ### `tests/stripe-webhook.spec.ts` — Stripe webhook (`POST /api/webhooks/stripe`)
 - **Always runs:** a request with no `stripe-signature` is rejected (`400`).
@@ -68,6 +83,9 @@ Skips unless `TEST_EMAIL` / `TEST_PASSWORD` are set. Covers:
   `fehlgeschlagen` (asserted in the DB). Uses `helpers/stripe.ts` to sign events
   (`generateTestHeaderString`) and seed/clean up the order via the service-role
   client.
+- **Gated on `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`:** a correctly-signed
+  event of an *unhandled* type (`payment_intent.created`) is acknowledged with
+  `200 {received:true}` — so Stripe doesn't retry unhandled events forever.
 - The Stripe *success* paths (`checkout.session.completed` /
   `async_payment_succeeded`) call the real Stripe API (`sessions.retrieve`), so
   they're covered by the UI-up-to-Stripe test rather than synthetic events.
@@ -125,28 +143,24 @@ reads them from the process environment:
 
 ## 4. Latest result
 
-Run on Chromium against the **seeded test project** (with `TEST_EMAIL` /
-`TEST_PASSWORD`):
+Run on Chromium against the **seeded test project** with **all** secrets
+(`TEST_EMAIL`/`TEST_PASSWORD`, Stripe test-mode keys, `SUPABASE_SERVICE_ROLE_KEY`):
 
 ```
-18 passed, 11 skipped
+27 passed, 8 skipped
   - passed: 11 public smoke + home→shop nav
   - passed: 3 admin dashboard (login, section nav, auth redirect)
   - passed: 2 shop-cart (add-to-cart, empty cart)
-  - passed: 1 stripe-webhook (missing-signature → 400, always enforced)
+  - passed: 1 checkout-ui (Zur Kasse → /api/checkout returns a Stripe URL)
+  - passed: 3 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
+  - passed: 5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
   - skipped: 7 account-addresses (no customer user — TEST_USER_* unset)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
-  - skipped: 2 stripe-webhook (forged-sig + async_payment_failed — Stripe secrets unset)
-  - skipped: 1 checkout-ui (Stripe redirect — STRIPE_SECRET_KEY unset)
 ```
 
-Once real Stripe **test-mode** secrets (`STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET`) are configured, the 3 payment tests activate
-(→ 21 passed, 8 skipped).
-
-Without a seeded DB / admin credentials, the admin and add-to-cart tests skip
-too (they never fail on a bare environment). See [CI_SETUP.md](./CI_SETUP.md)
-for the seeding + secrets setup that turns them green.
+On a bare machine (no Stripe key, no service role) the payment, webhook-signed,
+and checkout-validation tests **skip** rather than fail (≈18 passed). See
+[CI_SETUP.md](./CI_SETUP.md) for the seeding + secrets setup that turns them green.
 
 ---
 
@@ -162,6 +176,12 @@ for the seeding + secrets setup that turns them green.
   links); scope with `a[href="/shop"]:visible` and `.first()`.
 - **German UI text.** Assertions use the actual German copy (e.g. `Warenkorb`,
   `In den Warenkorb`, `Alle Klimageräte`).
+- **Seed data must use valid v4 UUIDs.** `POST /api/checkout` (and
+  `/api/products/[id]`) validate `artikel_id` against a strict **v4** UUID regex
+  (`…-4xxx-[89ab]xxx-…`). Production IDs come from `gen_random_uuid()` (always
+  v4), but hand-written seed IDs like `a1000000-0000-0000-0000-…` are **not** v4
+  and get rejected with `400 Ungültige Artikel-IDs`. The test seed
+  (`004_seed_testdaten.sql`) uses `a1000000-0000-4000-8000-…` so checkout works.
 
 ---
 
@@ -187,6 +207,41 @@ These are recommended enhancements, not blockers:
    shop, and admin dashboard.
 8. **`outputFileTracingRoot`.** Set it in `next.config.ts` to silence the
    multiple-lockfile warning (there is a stray `C:\Users\Ali.Said\package-lock.json`).
+
+### More scenarios & edge cases worth adding
+
+Prioritised by value ÷ effort. Items marked ✅ CI-safe need no external service
+and are deterministic against the seeded test project.
+
+**High value (add next):**
+- ✅ **Cart operations** — change quantity, remove a line item, and verify the
+  cart survives a page reload (it persists in `localStorage`). Extends
+  `shop-cart.spec.ts`; no keys needed.
+- ✅ **Admin login failure** — wrong password shows the German error and does
+  **not** navigate to `/admin`. Complements the existing success + redirect tests.
+- ✅ **Protected admin APIs reject anon** — `GET`/`POST` to an admin-only API
+  route without a session returns `401/403` (not `200`). Locks down authz.
+- ✅ **404 / unknown route** — an unknown path renders the not-found page (status
+  `404`) instead of an error boundary.
+
+**Medium value:**
+- **Pricing integrity at checkout** — seed an article with a `rabattpreis`
+  discount and assert the Checkout Session line item uses the discounted price
+  (proves H-5: server-side pricing). Needs `STRIPE_SECRET_KEY`.
+- **Variant surcharge** — an article variant adds its `preis_aufschlag`; assert
+  the session total reflects it, and that an unknown `variant_id` is ignored.
+- **Booking flow** — complete the multi-step `/booking` form and assert the
+  appointment persists (and later appears in `/admin/bookings`).
+- **Contact form** — submit `/contact`, assert the success state (email send is
+  fire-and-forget; assert the API `200`, not delivery).
+
+**Lower value / harder in CI:**
+- **Rate limiting (429)** — hammer an endpoint past its window. Flaky with the
+  in-memory fallback + high limits; better as a targeted unit test.
+- **Full Stripe payment** — pay with `4242…` and confirm the order flips to paid.
+  Needs `stripe listen` webhook forwarding — not available in standard CI.
+- **Email assertions, a11y (`@axe-core/playwright`), visual snapshots** — see the
+  numbered list above.
 
 ---
 

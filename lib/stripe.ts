@@ -7,7 +7,7 @@ import Stripe from 'stripe';
 // request time if the key is genuinely missing in production.
 let client: Stripe | null = null;
 
-function getClient(): Stripe {
+export function getStripe(): Stripe {
   if (!client) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
@@ -15,13 +15,4 @@ function getClient(): Stripe {
   }
   return client;
 }
-
-export const stripe = new Proxy({} as Stripe, {
-  get(_target, prop) {
-    const c = getClient();
-    const value = Reflect.get(c, prop, c);
-    return typeof value === 'function' ? value.bind(c) : value;
-  },
-});
-
 
