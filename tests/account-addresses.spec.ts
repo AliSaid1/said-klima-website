@@ -1,171 +1,125 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
-// Setup: configure baseURL and test user credentials.
-// These tests exercise the *customer* account area and need a seeded customer
-// user (plus existing addresses). They are skipped unless TEST_USER_EMAIL /
-// TEST_USER_PASSWORD are explicitly provided — the CI seed only provisions the
-// admin user (see docs/tests/CI_SETUP.md).
+/**
+ * Customer account → address management (CRUD) E2E.
+ *
+ * Needs a seeded *customer* (rolle=kunde) user with a couple of addresses. In CI
+ * that user is provisioned by scripts/seed-test-db.mjs from TEST_USER_EMAIL /
+ * TEST_USER_PASSWORD; the tests skip when those are unset so the suite stays
+ * green on a bare environment.
+ *
+ * Notes on the page under test (app/account/page.tsx):
+ *  - The customer login page redirects to "/" (not /account) on success, so we
+ *    wait for the confirmation toast then navigate to /account explicitly.
+ *  - The default "profile" tab renders the Adressen section + the add/edit form.
+ *  - The street/PLZ/Ort inputs are matched by placeholder; the Ort and Bundesland
+ *    inputs share the "Berlin" placeholder, so Ort is selected with .first().
+ */
 const baseURL = process.env.BASE_URL || 'http://localhost:3000';
 const testUserEmail = process.env.TEST_USER_EMAIL;
 const testUserPassword = process.env.TEST_USER_PASSWORD;
 
-test.describe('Account Page - Address Management', () => {
+const ADDRESS_CARD = '[class*="border-slate-200 rounded-xl p-4"]';
+
+async function fillAddressForm(
+  page: Page,
+  opts: { strasse?: string; plz?: string; ort?: string; lieferadresse?: boolean } = {},
+) {
+  if (opts.strasse !== undefined)
+    await page.locator('input[placeholder="Musterstraße 123"]').fill(opts.strasse);
+  if (opts.plz !== undefined)
+    await page.locator('input[placeholder="10115"]').fill(opts.plz);
+  if (opts.ort !== undefined)
+    await page.locator('input[placeholder="Berlin"]').first().fill(opts.ort);
+  if (opts.lieferadresse) await page.locator('input[type="checkbox"]').first().check();
+}
+
+test.describe('Account → Address management', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(
       !testUserEmail || !testUserPassword,
       'TEST_USER_EMAIL/TEST_USER_PASSWORD not set — customer account E2E skipped',
     );
-    // Navigate to login page and login
     await page.goto(`${baseURL}/account/login`);
     await page.fill('input[type="email"]', testUserEmail as string);
     await page.fill('input[type="password"]', testUserPassword as string);
     await page.click('button:has-text("Anmelden")');
 
-    // Wait for redirect to account page
-    await page.waitForURL(`${baseURL}/account`);
+    // Login redirects to "/" and shows a toast; then open the account page.
+    await expect(page.getByText(/Erfolgreich angemeldet/i).first()).toBeVisible({ timeout: 15000 });
+    await page.goto(`${baseURL}/account`);
+    await expect(page.getByRole('heading', { name: 'Adressen' })).toBeVisible({ timeout: 15000 });
   });
 
-  test('should display existing addresses with badges', async ({ page }) => {
-    // Verify addresses section is visible
-    const addressesSection = page.locator('text=Adressen');
-    await expect(addressesSection).toBeVisible();
-
-    // Check if any address exists and has badges
-    const addressCards = page.locator('[class*="border-slate-200 rounded-xl p-4"]');
-    if (await addressCards.count() > 0) {
-      const firstCard = addressCards.first();
-      // Should have edit/delete buttons
-      await expect(firstCard.locator('button:has-text("Bearbeiten")')).toBeVisible();
-      await expect(firstCard.locator('button:has-text("Löschen")')).toBeVisible();
-    }
+  test('shows seeded addresses with edit/delete actions', async ({ page }) => {
+    const cards = page.locator(ADDRESS_CARD);
+    await expect(cards.first()).toBeVisible();
+    await expect(cards.first().getByRole('button', { name: 'Bearbeiten' })).toBeVisible();
+    await expect(cards.first().getByRole('button', { name: 'Löschen' })).toBeVisible();
   });
 
-  test('should add a new address with checkboxes', async ({ page }) => {
-    // Fill in the address form
-    await page.fill('input[placeholder="Musterstraße 123"]', 'Teststraße 42');
-    await page.fill('input[placeholder="10115"]', '12345');
-    await page.fill('input[placeholder="Berlin"]', 'Teststadt');
+  test('adds a new address as delivery address', async ({ page }) => {
+    await fillAddressForm(page, {
+      strasse: 'Teststraße 42',
+      plz: '12345',
+      ort: 'Teststadt',
+      lieferadresse: true,
+    });
+    await page.getByRole('button', { name: 'Adresse speichern' }).click();
 
-    // Check the "Als Lieferadresse verwenden" checkbox
-    const deliveryCheckbox = page.locator('input[type="checkbox"]').first();
-    await deliveryCheckbox.check();
-
-    // Click save button
-    await page.click('button:has-text("Adresse speichern")');
-
-    // Verify success toast
-    await expect(page.locator('text=Adresse hinzugefügt')).toBeVisible();
-
-    // Verify new address appears in list with blue badge
-    await expect(page.locator('text=Teststraße 42')).toBeVisible();
-    await expect(page.locator('text=Lieferadresse')).toBeVisible();
+    await expect(page.getByText(/Adresse hinzugefügt/i).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText('Teststraße 42').first()).toBeVisible();
   });
 
-  test('should edit an existing address', async ({ page }) => {
-    // Get the first address card
-    const addressCards = page.locator('[class*="border-slate-200 rounded-xl p-4"]');
-    if (await addressCards.count() === 0) {
-      test.skip();
-    }
+  test('edits an existing address', async ({ page }) => {
+    const cards = page.locator(ADDRESS_CARD);
+    await cards.first().getByRole('button', { name: 'Bearbeiten' }).click();
 
-    // Click edit on first address
-    const editButton = addressCards.first().locator('button:has-text("Bearbeiten")');
-    await editButton.click();
-
-    // Form should now have the address data
     const streetInput = page.locator('input[placeholder="Musterstraße 123"]');
-    await expect(streetInput).toHaveValue(/.+/); // Should have some value
-
-    // Modify the street
+    await expect(streetInput).toHaveValue(/.+/);
     await streetInput.fill('Neue Teststraße 99');
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
 
-    // Click update button
-    await page.click('button:has-text("Aktualisieren")');
-
-    // Verify success toast
-    await expect(page.locator('text=Adresse aktualisiert')).toBeVisible();
+    await expect(page.getByText(/Adresse aktualisiert/i).first()).toBeVisible({ timeout: 8000 });
   });
 
-  test('should delete an address', async ({ page }) => {
-    // Get the first address card
-    const addressCards = page.locator('[class*="border-slate-200 rounded-xl p-4"]');
-    if (await addressCards.count() === 0) {
-      test.skip();
-    }
+  test('deletes an address', async ({ page }) => {
+    const cards = page.locator(ADDRESS_CARD);
+    const before = await cards.count();
+    await cards.first().getByRole('button', { name: 'Löschen' }).click();
 
-    const firstAddressText = await addressCards.first().locator('p.font-medium').first().textContent();
-
-    // Click delete on first address
-    const deleteButton = addressCards.first().locator('button:has-text("Löschen")');
-    await deleteButton.click();
-
-    // Verify success toast
-    await expect(page.locator('text=Adresse gelöscht')).toBeVisible();
-
-    // Verify address is gone from list
-    if (firstAddressText) {
-      await expect(page.locator(`text=${firstAddressText}`)).not.toBeVisible();
-    }
+    await expect(page.getByText(/Adresse gelöscht/i).first()).toBeVisible({ timeout: 8000 });
+    await expect(page.locator(ADDRESS_CARD)).toHaveCount(before - 1);
   });
 
-  test('should set delivery address as default via checkbox', async ({ page }) => {
-    // Skip if no addresses exist
-    const addressCards = page.locator('[class*="border-slate-200 rounded-xl p-4"]');
-    if (await addressCards.count() === 0) {
-      test.skip();
-    }
+  test('sets an address as the default delivery address', async ({ page }) => {
+    const cards = page.locator(ADDRESS_CARD);
+    await cards.first().getByRole('button', { name: 'Bearbeiten' }).click();
 
-    // Click edit on first address
-    const editButton = addressCards.first().locator('button:has-text("Bearbeiten")');
-    await editButton.click();
-
-    // Find and check the delivery checkbox
-    const checkboxes = page.locator('input[type="checkbox"]');
-    const deliveryCheckbox = checkboxes.first();
-
-    // Uncheck if already checked, then check
-    const isChecked = await deliveryCheckbox.isChecked();
-    if (isChecked) {
-      await deliveryCheckbox.uncheck();
-    }
+    const deliveryCheckbox = page.locator('input[type="checkbox"]').first();
+    if (await deliveryCheckbox.isChecked()) await deliveryCheckbox.uncheck();
     await deliveryCheckbox.check();
+    await page.getByRole('button', { name: 'Aktualisieren' }).click();
 
-    // Save
-    await page.click('button:has-text("Aktualisieren")');
-
-    // Verify toast
-    await expect(page.locator('text=Adresse aktualisiert|Lieferadresse aktualisiert')).toBeVisible();
+    await expect(
+      page.getByText(/Adresse aktualisiert|Lieferadresse aktualisiert/i).first(),
+    ).toBeVisible({ timeout: 8000 });
   });
 
-  test('should show undo action in toast after adding address', async ({ page }) => {
-    // Fill in form
-    await page.fill('input[placeholder="Musterstraße 123"]', 'Undo Teststraße 1');
-    await page.fill('input[placeholder="10115"]', '54321');
-    await page.fill('input[placeholder="Berlin"]', 'Undostadt');
+  test('offers an undo action after adding an address', async ({ page }) => {
+    await fillAddressForm(page, { strasse: 'Undo Teststraße 1', plz: '54321', ort: 'Undostadt' });
+    await page.getByRole('button', { name: 'Adresse speichern' }).click();
 
-    // Save
-    await page.click('button:has-text("Adresse speichern")');
-
-    // Verify toast with Rückgängig (undo) button appears
-    const undoButton = page.locator('button:has-text("Rückgängig")');
-    await expect(undoButton).toBeVisible({ timeout: 5000 });
-
-    // Click undo
-    await undoButton.click();
-
-    // Verify undo success toast
-    await expect(page.locator('text=Änderung rückgängig gemacht')).toBeVisible();
-
-    // Verify address is deleted
-    await expect(page.locator('text=Undo Teststraße 1')).not.toBeVisible();
+    const undo = page.getByRole('button', { name: 'Rückgängig' });
+    await expect(undo).toBeVisible({ timeout: 8000 });
+    await undo.click();
+    await expect(page.getByText(/rückgängig gemacht/i).first()).toBeVisible({ timeout: 8000 });
   });
 
-  test('should validate required fields on form submit', async ({ page }) => {
-    // Try to save without filling in required fields
-    await page.click('button:has-text("Adresse speichern")');
-
-    // Verify error toast
-    await expect(page.locator('text=Bitte Straße, PLZ und Ort ausfüllen')).toBeVisible();
+  test('validates required fields on submit', async ({ page }) => {
+    await page.getByRole('button', { name: 'Adresse speichern' }).click();
+    await expect(
+      page.getByText(/Bitte Straße, PLZ und Ort ausfüllen/i).first(),
+    ).toBeVisible({ timeout: 8000 });
   });
 });
-

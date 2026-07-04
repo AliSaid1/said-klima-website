@@ -24,79 +24,116 @@ config) and reuses an already-running server locally.
 
 ## 2. Test suites
 
-### `tests/helpers/auth.ts` (shared helper)
-- `adminLogin(page)` — logs in through `/admin/login` and waits for `/admin`.
-- `requireAdminCreds()` — skips a test when `TEST_EMAIL` / `TEST_PASSWORD` are unset.
-- Exposes `BASE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+Tests are grouped by **criticality** — how much a failure would hurt the business
+if it shipped. A ✅ marks a test that is currently green in CI (with all secrets +
+the seeded test project); ⏭️ marks an opt-in test that is intentionally skipped.
 
-### `tests/public-smoke.spec.ts` — public site (no auth, no seeded data)
-The baseline "the site is up" guarantee. For each public route it asserts:
-- HTTP status `< 400`,
-- the page did **not** fall into an error boundary,
-- the key heading/content is visible.
+| Criticality | Suite | What breaks if it fails |
+| --- | --- | --- |
+| 🔴 Critical | `security.spec.ts` | Anyone could reach protected data / bypass admin auth |
+| 🔴 Critical | `stripe-webhook.spec.ts` | Payments mis-recorded; orders never confirmed/failed |
+| 🔴 Critical | `checkout-validation.spec.ts` | Bad/forged carts reach payment |
+| 🔴 Critical | `checkout-ui.spec.ts` | Customers can't pay at all |
+| 🟠 High | `admin-dashboard.spec.ts` | Staff locked out of / into the back office |
+| 🟠 High | `shop-cart.spec.ts` | Customers can't build an order |
+| 🟠 High | `cart-operations.spec.ts` | Cart edits/persistence broken |
+| 🟠 High | `account-addresses.spec.ts` | Customers can't manage delivery addresses |
+| 🟡 Medium | `public-smoke.spec.ts` | A public page is down / erroring |
+| ⚪ Low | `upload.spec.ts` (opt-in) | Admin rich-text image upload |
 
-Routes covered: `/`, `/shop`, `/services`, `/contact`, `/booking`, `/cart`,
-and all legal pages (`impressum`, `datenschutz`, `agb`, `widerruf`,
-`versand-zahlung`). Plus a home → shop navigation test.
+### 🔴 Critical
 
-### `tests/admin-dashboard.spec.ts` — admin area (gated on credentials)
-Skips unless `TEST_EMAIL` / `TEST_PASSWORD` are set. Covers:
-- login → dashboard renders with the 4 KPI cards,
-- navigation to Produkte / Bestellungen / Termine,
-- unauthenticated users are redirected to `/admin/login`.
+**`tests/security.spec.ts` — auth & security boundaries** (always runs)
+- ✅ `GET /api/orders` without a session → `401 Nicht autorisiert` (authz).
+- ✅ Admin login with invalid credentials shows an error and stays on
+  `/admin/login` (never reaches the dashboard) (authn).
+- ✅ An unknown route returns `404` (no crash / error boundary).
 
-### `tests/shop-cart.spec.ts` — shop → cart flow (gated on catalog data)
-- Opens the first product, adds it to the cart, verifies the confirmation toast
-  and that it appears on `/cart` with a checkout button. **Stops before Stripe**
-  (external payment is not exercised).
-- Skips gracefully when the catalog is empty or the first product is sold out, so
-  a fresh/empty environment never produces a false failure.
-- Also verifies the empty-cart state.
-
-### `tests/checkout-ui.spec.ts` — checkout → Stripe (gated on `STRIPE_SECRET_KEY`)
-- Adds a product to the cart, clicks **"Zur Kasse"**, and asserts that
-  `POST /api/checkout` returns `200` with a real Stripe Checkout Session id
-  (`cs_…`) — the definitive proof the UI reached Stripe. The hosted
-  `checkout.stripe.com` URL is also asserted when Stripe returns one. It asserts
-  on the **API response** (via `page.waitForResponse`) rather than navigating to
-  Stripe's external page, so it isn't flaky on a slow Stripe load and it surfaces
-  the server error body if session creation fails. Payment completes via webhook.
-- Skips when `STRIPE_SECRET_KEY` is unset (a Checkout Session can't be created).
-
-### `tests/checkout-validation.spec.ts` — checkout input validation (gated on `SUPABASE_SERVICE_ROLE_KEY`)
-Guards the payment entry point. Every case is rejected with a `4xx` **before**
-any Stripe call, so no Stripe key is needed — only the service role (the route
-builds an admin client up front). Covers:
-- empty cart → `400`,
-- more than 50 items → `400`,
-- a non-UUID `artikel_id` → `400` (**this is exactly the class of bug the v4
-  UUID seed fix addressed** — see §5 gotcha),
-- an invalid quantity (`menge: 0`) → `400`,
-- a syntactically-valid v4 UUID that isn't a real article → `400 nicht gefunden`
-  (arbitrary IDs must never create a session).
-
-### `tests/stripe-webhook.spec.ts` — Stripe webhook (`POST /api/webhooks/stripe`)
-- **Always runs:** a request with no `stripe-signature` is rejected (`400`).
-- **Gated on `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`:** a forged signature
-  is rejected (`400`).
-- **Gated on Stripe secrets + `SUPABASE_SERVICE_ROLE_KEY`:** a signed
+**`tests/stripe-webhook.spec.ts` — Stripe webhook (`POST /api/webhooks/stripe`)**
+- ✅ **Always runs:** a request with no `stripe-signature` is rejected (`400`).
+- ✅ *(Stripe secrets)* a forged signature is rejected (`400`).
+- ✅ *(Stripe secrets)* a correctly-signed event of an *unhandled* type
+  (`payment_intent.created`) is acknowledged `200 {received:true}` — so Stripe
+  doesn't retry unhandled events forever.
+- ✅ *(Stripe secrets + service role)* a signed
   `checkout.session.async_payment_failed` event transitions the seeded order to
   `fehlgeschlagen` (asserted in the DB). Uses `helpers/stripe.ts` to sign events
-  (`generateTestHeaderString`) and seed/clean up the order via the service-role
-  client.
-- **Gated on `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`:** a correctly-signed
-  event of an *unhandled* type (`payment_intent.created`) is acknowledged with
-  `200 {received:true}` — so Stripe doesn't retry unhandled events forever.
+  and seed/clean up the order via the service-role client.
 - The Stripe *success* paths (`checkout.session.completed` /
   `async_payment_succeeded`) call the real Stripe API (`sessions.retrieve`), so
   they're covered by the UI-up-to-Stripe test rather than synthetic events.
 
-### Pre-existing specs (gated / opt-in)
-- `tests/account-addresses.spec.ts` — customer address CRUD on `/account`.
-  Skipped unless `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` are set (needs a seeded
-  **customer** user with addresses; the CI seed only provisions the admin user).
-- `tests/upload.spec.ts` — rich-text-editor image upload. Opt-in: set
-  `RUN_UPLOAD_E2E=1` (needs Storage buckets + editor access). Skipped by default.
+**`tests/checkout-validation.spec.ts` — checkout input validation** *(service role)*
+Guards the payment entry point. Every case is rejected with a `4xx` **before**
+any Stripe call, so no Stripe key is needed — only the service role (the route
+builds an admin client up front).
+- ✅ empty cart → `400`
+- ✅ more than 50 items → `400`
+- ✅ a non-UUID `artikel_id` → `400` (the class of bug the v4 UUID seed fix
+  addressed — see §5 gotcha)
+- ✅ an invalid quantity (`menge: 0`) → `400`
+- ✅ a syntactically-valid v4 UUID that isn't a real article → `400 nicht gefunden`
+  (arbitrary IDs must never create a session)
+
+**`tests/checkout-ui.spec.ts` — checkout → Stripe** *(`STRIPE_SECRET_KEY`)*
+- ✅ Adds a product, clicks **"Zur Kasse"**, and asserts `POST /api/checkout`
+  returns `200` with a real Stripe Checkout Session id (`cs_…`) — the definitive
+  proof the UI reached Stripe. It intercepts the API response with `page.route`
+  (reading the body inside the handler) so the success-navigation to Stripe can't
+  wipe it, and neuters the redirect so no external page load is needed. The hosted
+  `checkout.stripe.com` URL is asserted when present. Payment completes via webhook.
+
+### 🟠 High
+
+**`tests/admin-dashboard.spec.ts` — admin area** *(`TEST_EMAIL` / `TEST_PASSWORD`)*
+- ✅ login → dashboard renders with the 4 KPI cards
+- ✅ navigation to Produkte / Bestellungen / Termine
+- ✅ unauthenticated users are redirected to `/admin/login`
+
+**`tests/shop-cart.spec.ts` — shop → cart flow** *(gated on catalog data)*
+- ✅ Opens the first product, adds it to the cart, verifies the confirmation toast
+  and that it appears on `/cart` with a checkout button. Stops before Stripe.
+- ✅ Verifies the empty-cart state.
+- Skips gracefully when the catalog is empty or the first product is sold out.
+
+**`tests/cart-operations.spec.ts` — cart edit & persistence** (always runs)
+Seeds a cart item directly into `localStorage` (key `kks-cart`) so it's
+deterministic and catalog-independent.
+- ✅ removing the only item empties the cart
+- ✅ increasing the quantity updates the persisted cart (2 → 3)
+- ✅ the cart survives a page reload (rehydrates from `localStorage`)
+
+**`tests/account-addresses.spec.ts` — customer address CRUD** *(`TEST_USER_*`)*
+Runs against a seeded **customer** (`rolle=kunde`) user with two pre-seeded
+addresses (provisioned by `scripts/seed-test-db.mjs`).
+- ✅ shows seeded addresses with edit/delete actions
+- ✅ adds a new address as delivery address
+- ✅ edits an existing address
+- ✅ deletes an address
+- ✅ sets an address as the default delivery address
+- ✅ offers an undo action after adding
+- ✅ validates required fields on submit
+
+### 🟡 Medium
+
+**`tests/public-smoke.spec.ts` — public site** (no auth, no seeded data)
+The baseline "the site is up" guarantee. For each public route it asserts the
+HTTP status is `< 400`, the page didn't hit an error boundary, and the key
+heading is visible. Routes: `/`, `/shop`, `/services`, `/contact`, `/booking`,
+`/cart`, and all legal pages (`impressum`, `datenschutz`, `agb`, `widerruf`,
+`versand-zahlung`), plus a home → shop navigation test. ✅
+
+### ⚪ Low (opt-in)
+
+**`tests/upload.spec.ts` — rich-text-editor image upload**
+- ⏭️ Opt-in: set `RUN_UPLOAD_E2E=1` (needs Storage buckets + editor access).
+  Skipped by default because it depends on Supabase Storage configuration that
+  isn't part of the test-DB seed.
+
+### Shared helpers
+- `tests/helpers/auth.ts` — `adminLogin(page)`, `requireAdminCreds()`, `BASE_URL`.
+- `tests/helpers/stripe.ts` — webhook signing, service-role client, order seed/cleanup.
+
 
 ---
 
@@ -132,7 +169,7 @@ reads them from the process environment:
 | --- | --- |
 | `BASE_URL` | App URL under test (default `http://localhost:3000`) |
 | `TEST_EMAIL` / `TEST_PASSWORD` | Admin login — enables admin-gated tests |
-| `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` | *Optional* — customer login; enables `account-addresses` |
+| `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` | Customer login — enables `account-addresses`. In CI these are self-contained (fixed email + reused `TEST_PASSWORD`), and the seed provisions the `kunde` user. |
 | `STRIPE_SECRET_KEY` | *Optional* — Stripe **test-mode** secret; enables the checkout→Stripe redirect test and webhook signature test |
 | `STRIPE_WEBHOOK_SECRET` | *Optional* — webhook signing secret; enables the signed-webhook tests |
 | `SUPABASE_SERVICE_ROLE_KEY` | *Optional (already set in CI)* — needed to seed an order for the `async_payment_failed` webhook test |
@@ -144,23 +181,27 @@ reads them from the process environment:
 
 ## 4. Latest result
 
-Run on Chromium against the **seeded test project** with **all** secrets
-(`TEST_EMAIL`/`TEST_PASSWORD`, Stripe test-mode keys, `SUPABASE_SERVICE_ROLE_KEY`):
+Run on Chromium against the **seeded test project** with all secrets
+(`TEST_EMAIL`/`TEST_PASSWORD`, Stripe test-mode keys, `SUPABASE_SERVICE_ROLE_KEY`;
+the customer `kunde` user is auto-seeded):
 
 ```
-27 passed, 8 skipped
+40 passed, 1 skipped
   - passed: 11 public smoke + home→shop nav
-  - passed: 3 admin dashboard (login, section nav, auth redirect)
-  - passed: 2 shop-cart (add-to-cart, empty cart)
-  - passed: 1 checkout-ui (Zur Kasse → /api/checkout returns a Stripe URL)
-  - passed: 3 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
-  - passed: 5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
-  - skipped: 7 account-addresses (no customer user — TEST_USER_* unset)
+  - passed:  3 security (anon API 401, bad admin login, 404)
+  - passed:  3 admin dashboard (login, section nav, auth redirect)
+  - passed:  2 shop-cart (add-to-cart, empty cart)
+  - passed:  3 cart-operations (remove, quantity, persistence)
+  - passed:  7 account-addresses (customer address CRUD)
+  - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
+  - passed:  4 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
+  - passed:  5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
 ```
 
-On a bare machine (no Stripe key, no service role) the payment, webhook-signed,
-and checkout-validation tests **skip** rather than fail (≈18 passed). See
+The only remaining skip is the opt-in Storage upload spec. On a bare machine
+(no Stripe key, no service role, no customer creds) the payment, webhook-signed,
+checkout-validation and account-address tests **skip** rather than fail. See
 [CI_SETUP.md](./CI_SETUP.md) for the seeding + secrets setup that turns them green.
 
 ---
@@ -214,18 +255,17 @@ These are recommended enhancements, not blockers:
 Prioritised by value ÷ effort. Items marked ✅ CI-safe need no external service
 and are deterministic against the seeded test project.
 
-**High value (add next):**
-- ✅ **Cart operations** — change quantity, remove a line item, and verify the
-  cart survives a page reload (it persists in `localStorage`). Extends
-  `shop-cart.spec.ts`; no keys needed.
-- ✅ **Admin login failure** — wrong password shows the German error and does
-  **not** navigate to `/admin`. Complements the existing success + redirect tests.
-- ✅ **Protected admin APIs reject anon** — `GET`/`POST` to an admin-only API
-  route without a session returns `401/403` (not `200`). Locks down authz.
-- ✅ **404 / unknown route** — an unknown path renders the not-found page (status
-  `404`) instead of an error boundary.
+**✅ Done (implemented this round):**
+- ✅ **Cart operations** — quantity change, remove line item, persistence across
+  reload (`cart-operations.spec.ts`).
+- ✅ **Admin login failure** — invalid credentials show an error and don't reach
+  the dashboard (`security.spec.ts`).
+- ✅ **Protected APIs reject anon** — `GET /api/orders` without a session → `401`
+  (`security.spec.ts`).
+- ✅ **404 / unknown route** — returns `404` instead of an error boundary
+  (`security.spec.ts`).
 
-**Medium value:**
+**Medium value (next candidates):**
 - **Pricing integrity at checkout** — seed an article with a `rabattpreis`
   discount and assert the Checkout Session line item uses the discounted price
   (proves H-5: server-side pricing). Needs `STRIPE_SECRET_KEY`.

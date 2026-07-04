@@ -40,8 +40,12 @@ jobs:
       BASE_URL: http://localhost:3000
       TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
       TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
-      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+      # Customer (rolle=kunde) test user — seeded by scripts/seed-test-db.mjs to
+      # enable the account-address CRUD tests. Self-contained: a fixed email plus
+      # the same throwaway password as the admin user (dedicated TEST project),
+      # so no extra GitHub secrets are required.
+      TEST_USER_EMAIL: e2e-customer@said-klima.de
+      TEST_USER_PASSWORD: ${{ secrets.TEST_PASSWORD }}
 
     steps:
       - name: Checkout

@@ -137,6 +137,68 @@ async function ensureAdminUser() {
   console.log("  - benutzer row upserted + promoted to rolle='admin'");
 }
 
+async function ensureCustomerUser() {
+  const email = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
+  if (!email || !password) {
+    console.log('- Skipping customer test user (TEST_USER_EMAIL/TEST_USER_PASSWORD not set)');
+    return;
+  }
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  console.log(`- Ensuring customer test user: ${email}`);
+
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { vorname: 'E2E', nachname: 'Kunde' },
+  });
+
+  let userId = created?.user?.id;
+  if (createErr) {
+    if (/already|registered|exists/i.test(createErr.message)) {
+      const { data: list } = await admin.auth.admin.listUsers();
+      const existing = list?.users?.find((u) => u.email === email);
+      if (!existing) throw new Error('Customer user exists but not found via listUsers()');
+      userId = existing.id;
+      const { error: updErr } = await admin.auth.admin.updateUserById(userId, {
+        password, email_confirm: true,
+      });
+      if (updErr) throw updErr;
+      console.log('  - existing customer password reset');
+    } else {
+      throw createErr;
+    }
+  } else {
+    console.log(`  - created customer ${userId}`);
+  }
+
+  if (!userId) throw new Error('Could not determine customer user id');
+
+  // Same rationale as the admin user: the public schema is wiped every run but
+  // the auth user persists, so upsert the benutzer row (rolle='kunde') keyed by
+  // the auth id. Then seed two addresses so the account-address CRUD E2E tests
+  // always have existing cards to edit/delete (the schema wipe clears these).
+  const emailSql = email.replace(/'/g, "''");
+  await execSQL(
+    `INSERT INTO public.benutzer (id, vorname, nachname, email, passwort_hash, rolle, email_bestaetigt)
+       VALUES ('${userId}', 'E2E', 'Kunde', '${emailSql}', 'supabase-auth', 'kunde', true)
+     ON CONFLICT (id) DO UPDATE SET
+       rolle='kunde', email_bestaetigt=true, email=EXCLUDED.email, aktualisiert_am=now();
+     DELETE FROM public.benutzer_adressen WHERE benutzer_id='${userId}';
+     INSERT INTO public.benutzer_adressen
+       (benutzer_id, strasse, plz, ort, bundesland, land, standard_lieferadresse, standard_rechnungsadresse)
+     VALUES
+       ('${userId}', 'Musterstraße 1', '10115', 'Berlin', 'Berlin', 'DE', true, true),
+       ('${userId}', 'Beispielweg 2', '20095', 'Hamburg', 'Hamburg', 'DE', false, false);`,
+    'seed-customer',
+  );
+  console.log("  - customer benutzer row + 2 addresses seeded");
+}
+
 async function main() {
   console.log('========================================');
   console.log('  Supabase E2E Test-DB Seeder');
@@ -146,6 +208,7 @@ async function main() {
   await applyFile(BASELINE, 'baseline schema (test-baseline.sql)');
   await applyFile(SEED, 'test catalog (004_seed_testdaten.sql)');
   await ensureAdminUser();
+  await ensureCustomerUser();
   // PostgREST caches the schema; force a reload so embedded FK selects
   // (e.g. artikel -> marken/kategorien/lagerbestaende) resolve immediately.
   console.log('- Reloading PostgREST schema cache');
