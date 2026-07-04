@@ -37,7 +37,14 @@ export async function middleware(request: NextRequest) {
   const isCheckoutPath = CHECKOUT_PATHS.some((p) => pathname.startsWith(p));
   const isMutationMethod = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
 
-  if (isMutationMethod) {
+  // E2E/CI escape hatch: the Playwright suite drives many auth/checkout POSTs
+  // from a single IP, which legitimately trips the per-IP limits and turns the
+  // run flaky (429 cascades). We disable rate limiting ONLY when this flag is
+  // explicitly set in the environment. It is never set in production, so real
+  // traffic is always rate limited.
+  const rateLimitDisabled = process.env.DISABLE_RATE_LIMIT === '1';
+
+  if (isMutationMethod && !rateLimitDisabled) {
     if (isAuthPath) {
       const rl = await rateLimit(`rl:auth:${ip}:${pathname}`, AUTH_MAX, AUTH_WINDOW);
       if (!rl.allowed) {

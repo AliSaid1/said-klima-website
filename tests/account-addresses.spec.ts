@@ -117,15 +117,21 @@ test.describe('Account → Address management', () => {
     ).toBeVisible({ timeout: 8000 });
   });
 
-  /** After adding an address the toast offers a working "Rückgängig" undo. */
+  /** After adding an address the toast offers a working "Rückgängig" undo that removes it again. */
   test('offers an undo action after adding an address', async ({ page }) => {
     await fillAddressForm(page, { strasse: 'Undo Teststraße 1', plz: '54321', ort: 'Undostadt' });
     await page.getByRole('button', { name: 'Adresse speichern' }).click();
 
-    const undo = page.getByRole('button', { name: 'Rückgängig' });
+    // The new address is persisted and rendered before we undo it.
+    await expect(page.getByText('Undo Teststraße 1').first()).toBeVisible({ timeout: 8000 });
+
+    const undo = page.getByRole('button', { name: 'Rückgängig' }).first();
     await expect(undo).toBeVisible({ timeout: 8000 });
     await undo.click();
-    await expect(page.getByText(/rückgängig gemacht/i).first()).toBeVisible({ timeout: 8000 });
+
+    // Undo reverses the add: the address card is gone again. Asserting the
+    // end-state is more robust than racing the transient confirmation toast.
+    await expect(page.getByText('Undo Teststraße 1')).toHaveCount(0, { timeout: 8000 });
   });
 
   /** Submitting an empty form surfaces the required-fields validation message. */

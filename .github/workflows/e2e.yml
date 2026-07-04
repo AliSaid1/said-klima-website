@@ -34,6 +34,10 @@ jobs:
       # Upstash intentionally left unset — the rate limiter falls back to in-memory.
       UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
       UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      # Disable per-IP rate limiting for the suite: Playwright drives many
+      # auth/checkout POSTs from one IP, which would otherwise trip the limits
+      # and produce flaky 429 cascades. Never set in production.
+      DISABLE_RATE_LIMIT: '1'
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       # App + test config ----------------------------------------------------
       NEXT_PUBLIC_APP_URL: http://localhost:3000
