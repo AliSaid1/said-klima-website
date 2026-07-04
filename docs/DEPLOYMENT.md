@@ -62,44 +62,52 @@ broke. Today you'd only notice from the red badge — after it's already live.
 
 ---
 
-## 2. Recommended flow (branch protection + auto-merge)
+## 2. Recommended flow (Git Flow: `develop` → `main`)
 
-The repo is now **public**, so GitHub branch protection **enforces for free**,
-and GitHub **Actions minutes are unlimited**. That unlocks the real fix: make
-`main` protected so nothing lands on it unless the E2E suite is green — and let
-GitHub **auto-merge** the PR the moment it passes, so you don't have to babysit
-it.
+The repo is now **public**, so GitHub branch protection **enforces for free** and
+GitHub **Actions minutes are unlimited**. We use a **Git Flow** model with two
+permanent branches:
+
+- **`main`** — production. Protected. Vercel deploys the **live site** from it.
+  Nothing lands here except a green, tested release.
+- **`develop`** — permanent integration / **staging** branch. This is where all
+  day-to-day work happens (directly, or via optional short-lived `feature/*`
+  branches that merge back into `develop`). Vercel gives `develop` its own
+  **Preview URL** — a always-on staging environment to test on.
+
+You **release** by opening a PR from `develop → main`. E2E must pass, and
+GitHub **auto-merges** it the moment it's green — then Vercel deploys production.
 
 ```
-   feature/xyz
-        │  git push
-        ▼
-   ┌─────────────────────────────┐        ┌───────────────────────────────┐
-   │  Open PR → main             │───────▶│  Vercel PREVIEW deployment      │
-   │  + click "Enable auto-merge"│        │  unique URL, test it live       │
-   └─────────────────────────────┘        └───────────────────────────────┘
-        │
-        ▼
-   ┌─────────────────────────────┐
-   │  GitHub Actions E2E on PR   │
-   └─────────────────────────────┘
-        │
-        ├── ❌ red  →  merge BLOCKED by branch protection, main untouched, prod safe
-        │
-        └── ✅ green → auto-merge fires → merges to main
-                                             │
-                                             ▼
-                                   Vercel PRODUCTION deploy
-                                   (only ever from tested code)
+  feature/* (optional)                 develop  (permanent staging)
+        │  merge back                      │  ← all your daily work lands here
+        └──────────────▶ develop ──────────┤     (Vercel Preview URL = staging)
+                                           │
+                                  push triggers E2E on develop
+                                           │
+                            ── ready to release? ──
+                                           │
+                                           ▼
+                         Open PR: develop ──▶ main   +  Enable auto-merge
+                                           │
+                             ┌─────────────┴──────────────┐
+                             │  GitHub Actions E2E on PR   │
+                             └─────────────┬──────────────┘
+                                           │
+             ❌ red  → merge BLOCKED (branch protection), main + prod untouched
+                                           │
+             ✅ green → auto-merge → merges to main → Vercel PRODUCTION deploy
 ```
 
 Benefits (all free now that the repo is public):
-- **Hard block, not a habit** — GitHub *refuses* to merge a red PR. Broken code
-  physically cannot reach `main` or production.
-- **Auto-merge** — enable it once per PR; GitHub merges automatically when E2E
-  goes green, so a passing run ships itself.
-- **Preview URLs** — click through the real change before it's live.
-- **`main` stays deployable** at all times.
+- **One place to work** — `develop` is your permanent branch; you don't recreate
+  it. Optional `feature/*` branches keep bigger changes isolated.
+- **Always-on staging** — the `develop` Preview URL lets you click-test the real
+  app before any release.
+- **Hard release gate** — GitHub *refuses* to merge `develop → main` while E2E is
+  red, so broken code physically cannot reach production.
+- **Auto-merge** — enable once per release PR; a green run ships itself.
+- **`main` stays live and clean** at all times.
 
 ---
 
@@ -122,11 +130,10 @@ Two things changed in your favor by going public:
 | Required status checks can block merge? | ❌ no | ✅ **yes** |
 | Auto-merge available? | limited | ✅ **yes** |
 
-So the recommended flow is now **Option A (GitHub branch protection)** — it's the
-simplest *and* gives a real technical block. The old "just don't click merge on
-red" discipline workaround is no longer necessary. (Option B, gating Vercel
-directly, remains available in §5 if you ever want the deploy itself — not just
-the merge — to be conditional, but you don't need it.)
+So the release gate is now **GitHub branch protection on `main`** — it's simple
+*and* gives a real technical block. (Option B, gating Vercel directly, remains
+available in §5 if you ever want the deploy itself — not just the merge — to be
+conditional, but you don't need it.)
 
 > ⚠️ **One caveat about going public:** everything in the repo is now visible to
 > the world — including full source, and any secret ever committed to git
@@ -137,11 +144,18 @@ the merge — to be conditional, but you don't need it.)
 
 ---
 
-## 4. Option A setup — branch protection + auto-merge (step by step)
+## 4. Setup — Git Flow + branch protection + auto-merge (step by step)
 
 ### One-time setup
 
-**A. Ruleset / branch protection** (you've done the ruleset — verify it has):
+**A. Create the permanent `develop` branch** (from an up-to-date `main`):
+```bash
+git checkout main && git pull
+git checkout -b develop
+git push -u origin develop
+```
+
+**B. Protect `main` with the ruleset** (you've done the ruleset — verify it has):
 1. Settings → **Rules → Rulesets** → your ruleset.
 2. **Target branches** → *Include default branch* (`main`). *(Fixes the "does
    not target any resources" message.)*
@@ -151,62 +165,74 @@ the merge — to be conditional, but you don't need it.)
      (you're solo; you don't need to approve your own PRs).
    - ✅ **Require status checks to pass** → add the check named **`Playwright
      E2E`** (the job name from `.github/workflows/e2e.yml`). *GitHub only lists a
-     check here after it has run on a PR at least once — so open your first PR,
-     let E2E run, then add it.*
+     check here after it has run on a PR at least once — so open your first
+     `develop → main` PR, let E2E run, then add it.*
    - ✅ (optional) **Block force pushes**.
 
-**B. Turn on auto-merge for the repo:**
+   Leave **`develop` unprotected** — you push to it freely all day.
+
+**C. Turn on auto-merge for the repo:**
 1. Settings → **General** → scroll to **Pull Requests**.
 2. Tick ✅ **Allow auto-merge**. Save.
 
-**C. Vercel (confirm, likely already set):** Project → Settings →
-**Build and Deployment** → Production Branch = `main`. Preview Deployments for
-branches/PRs are on by default.
+**D. Vercel:** Project → Settings → **Build and Deployment** → confirm
+**Production Branch = `main`**. Preview Deployments are on by default, so
+`develop` automatically gets a stable **staging** Preview URL.
 
-### Every change from now on
+### Daily work — on `develop`
 
 ```bash
-# 1. branch off main with a descriptive, professional name (see convention below)
-git checkout main && git pull
-git checkout -b feature/customer-invoices
+# switch to develop and keep it current
+git checkout develop && git pull
 
-# 2. commit + push
+# small change → commit straight onto develop
 git add -A
-git commit -m "Add customer invoice download"
+git commit -m "Fix cart quantity rounding"
+git push                     # → E2E runs on develop; Vercel updates the staging URL
+
+# bigger/riskier change → isolate it in a feature branch off develop, then merge back
+git checkout -b feature/customer-invoices
+# ...work, commit...
 git push -u origin feature/customer-invoices
-
-# 3. open a PR → main (the push prints a "Create a pull request" link).
-#    On the PR page click "Enable auto-merge".
-#      → GitHub Actions runs E2E automatically (free, unlimited)
-#      → Vercel posts a Preview URL — open it, click-test the change
-#
-#    • E2E ❌ red  → merge stays blocked; fix and push again to the same branch
-#    • E2E ✅ green → auto-merge merges the PR into main for you
-#                     → Vercel deploys production from the merged commit
-
-# 4. after merge, tidy up
-git checkout main && git pull
-git branch -d feature/customer-invoices     # GitHub also offers a "Delete branch" button
+#   (optional PR feature → develop, or just merge locally)
+git checkout develop && git merge feature/customer-invoices && git push
+git branch -d feature/customer-invoices
 ```
 
-### Branch naming convention (professional)
+### Releasing — `develop → main`
 
-Use a `type/short-description` prefix, lowercase, hyphen-separated:
+```bash
+# when develop is green and you're happy with the staging URL:
+# open a PR: base = main, compare = develop
+#   → on GitHub: "New pull request", base: main ← compare: develop
+#   → click "Enable auto-merge"
+#      • E2E ❌ red  → merge blocked; fix on develop, push, PR re-runs
+#      • E2E ✅ green → auto-merge merges develop into main
+#                       → Vercel deploys PRODUCTION
+# after the release, pull main locally so it's current:
+git checkout main && git pull
+git checkout develop        # go back to working on develop
+```
+
+### Branch naming convention (for the optional `feature/*` branches)
+
+Your two permanent branches are `main` and `develop`. Any *temporary* branch off
+`develop` uses a `type/short-description` prefix — lowercase, hyphen-separated:
 
 | Prefix | Use for | Example |
 | --- | --- | --- |
 | `feature/` | new functionality | `feature/customer-invoices` |
 | `fix/` | bug fixes | `fix/cart-quantity-race` |
 | `chore/` | deps, config, tooling | `chore/bump-next-15-5-19` |
-| `docs/` | documentation only | `docs/deployment-branch-protection` |
+| `docs/` | documentation only | `docs/deployment-guide` |
 | `refactor/` | internal cleanup, no behaviour change | `refactor/email-templates` |
 
-Avoid throwaway names like `my-change`, `test`, `tmp`. The branch name shows up
-in the PR and git history — make it say what the change is.
+Avoid throwaway names like `my-change`, `test`, `tmp`. The name shows up in git
+history — make it say what the change is.
 
-> Note: with **Require a pull request before merging** active, direct
-> `git push origin main` is now **rejected** — every change must go through a PR.
-> That's the point: it guarantees prod only ever sees tested code.
+> Note: with **Require a pull request before merging** active on `main`, a direct
+> `git push origin main` is now **rejected**. Production changes *only* through a
+> green `develop → main` PR — that's the guarantee.
 
 ---
 
