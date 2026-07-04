@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * Admin — shared dashboard layout, /admin/*.
+ *
+ * Client component. Uses Supabase auth and the benutzer (user) role table to
+ * guard admin routes, redirects non-admins, and wraps child routes with the
+ * shared admin chrome: sidebar, topbar, main scroll container, and toast host.
+ * The /admin/login route receives a minimal unauthenticated shell.
+ */
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -7,6 +15,10 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminTopbar from '@/components/admin/AdminTopbar';
 import { Toaster } from 'sonner';
 
+/**
+ * Provides the protected admin frame and performs the client-side admin role
+ * check before rendering protected route content.
+ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | undefined>();
@@ -96,4 +108,3 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     </div>
   );
 }
-

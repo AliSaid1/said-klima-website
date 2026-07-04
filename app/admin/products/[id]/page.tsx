@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * Admin — product editor, /admin/products/[id].
+ *
+ * Client component. Loads one artikel (product) plus kategorie (category) and
+ * brand options from /api/products/[id], /api/categories, and /api/brands.
+ * Updates or deletes the product through /api/products/[id] and can create a
+ * brand inline. Offers CRUD editing for product data, variants, stock, images,
+ * technical content, SEO, and visibility within the admin auth context.
+ */
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, FieldErrors } from 'react-hook-form';
@@ -20,6 +29,10 @@ type FormValues = z.infer<typeof updateArtikelSchema>;
 interface Kategorie { id: string; name: string; slug: string }
 interface Marke { id: string; name: string }
 
+/**
+ * Renders the edit-artikel (product) form and persists changes, inline brand
+ * additions, and destructive deletion actions for the selected product.
+ */
 export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();

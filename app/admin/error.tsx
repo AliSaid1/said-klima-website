@@ -1,7 +1,18 @@
 'use client';
 
+/**
+ * Admin — route error boundary, /admin.
+ *
+ * Client component used by the App Router as the admin error boundary. It
+ * surfaces unexpected route errors inside the admin auth context and offers a
+ * reset action to retry rendering the failed segment.
+ */
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
+/**
+ * Renders a recoverable admin error state with the error message and reset
+ * callback supplied by Next.js.
+ */
 export default function AdminError({
   error,
   reset,
@@ -30,4 +41,3 @@ export default function AdminError({
     </div>
   );
 }
-

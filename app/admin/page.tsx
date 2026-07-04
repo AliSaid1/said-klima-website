@@ -1,9 +1,21 @@
+/**
+ * Admin — dashboard overview, /admin.
+ *
+ * Server component. Reads Supabase tables for artikel (product),
+ * bestellungen (order), and buchungen (booking) KPIs plus recent list data.
+ * Offers read-only navigation to product creation, orders, and bookings.
+ * Rendered within the shared admin auth context from app/admin/layout.tsx.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { Package, ShoppingBag, CalendarDays, Euro } from 'lucide-react';
 import StatsCard from '@/components/admin/StatsCard';
 import StatusBadge from '@/components/admin/StatusBadge';
 import Link from 'next/link';
 
+/**
+ * Renders the admin landing dashboard with KPI cards, recent orders, upcoming
+ * bookings, and quick actions for common administrative workflows.
+ */
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
@@ -182,4 +194,3 @@ export default async function AdminDashboardPage() {
     </div>
   );
 }
-

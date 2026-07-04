@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — booking settings, /admin/bookings/settings.
+ *
+ * Client component. Fetches techniker (technician) records from
+ * /api/technicians and blocked dates from /api/blocked-dates. Offers schedule
+ * editing UI, global blocked-date creation, and blocked-date deletion for the
+ * buchung (booking) workflow inside the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import { Clock, CalendarOff, Plus, Trash2, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,6 +36,10 @@ interface Techniker {
 
 const wochentage = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
+/**
+ * Renders technician availability controls and global blocked-day management
+ * for appointment booking administration.
+ */
 export default function BookingSettingsPage() {
   const [technicians, setTechnicians] = useState<Techniker[]>([]);
   const [selectedTech, setSelectedTech] = useState<string>('');

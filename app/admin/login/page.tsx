@@ -1,5 +1,13 @@
  'use client';
 
+/**
+ * Admin — login page, /admin/login.
+ *
+ * Client component. Uses react-hook-form and Zod for credential validation,
+ * then calls Supabase auth signInWithPassword. Offers no CRUD actions; it
+ * establishes the admin session consumed by app/admin/layout.tsx for protected
+ * benutzer (user) role checks.
+ */
 import { useState } from 'react';
 import Image from 'next/image';
 import { LOGO_SRC, COMPANY_NAME } from '@/lib/branding';
@@ -16,6 +24,10 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+/**
+ * Renders the administrator sign-in form and redirects to the dashboard after
+ * Supabase successfully writes the authenticated session cookie.
+ */
 export default function AdminLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -131,4 +143,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-

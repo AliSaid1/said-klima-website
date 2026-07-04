@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — company settings, /admin/settings.
+ *
+ * Client component. Fetches firmeneinstellungen (company settings) from
+ * /api/settings and saves updates with PUT. Offers editing for company contact
+ * data, address, opening hours, brand colors, and shipping thresholds inside
+ * the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Building2, Save, Loader2, Palette, Truck } from 'lucide-react';
@@ -32,6 +40,10 @@ interface SettingsData {
   versandkostenlos_ab: number;
 }
 
+/**
+ * Renders the firmeneinstellungen (company settings) form and persists
+ * operational, branding, opening-hour, and shipping configuration changes.
+ */
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -337,4 +349,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

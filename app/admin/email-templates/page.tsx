@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — email templates, /admin/email-templates.
+ *
+ * Client component. Fetches email_vorlagen (email templates) from
+ * /api/email-templates and updates subject/body HTML via PUT. Offers template
+ * selection, placeholder visibility, HTML editing, and preview inside the admin
+ * auth context.
+ */
 import { useState, useEffect } from 'react';
 import { Mail, Save, Loader2, Eye, Code } from 'lucide-react';
 import { toast } from 'sonner';
@@ -26,6 +34,10 @@ const typLabels: Record<string, string> = {
   kontakt_anfrage_bestaetigung: 'Kontakt: Kundenbestätigung',
 };
 
+/**
+ * Renders the email template manager with list navigation, HTML editor, preview
+ * mode, and save workflow for transactional messages.
+ */
 export default function EmailTemplatesPage() {
   const [templates, setTemplates] = useState<EmailVorlage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,4 +194,3 @@ export default function EmailTemplatesPage() {
     </div>
   );
 }
-

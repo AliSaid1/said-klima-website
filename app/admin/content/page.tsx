@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Admin — content list, /admin/content.
+ *
+ * Client component. Fetches rechtstext (legal/CMS page) records from
+ * /api/content and displays publication status plus update dates. Offers
+ * read/navigation into individual CMS editors inside the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
@@ -13,6 +20,9 @@ interface Rechtstext {
   aktualisiert_am: string;
 }
 
+/**
+ * Renders the CMS page index with links to per-slug content editors.
+ */
 export default function ContentListPage() {
   const [pages, setPages] = useState<Rechtstext[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,4 +87,3 @@ export default function ContentListPage() {
     </div>
   );
 }
-

@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Admin — content editor, /admin/content/[slug].
+ *
+ * Client component. Loads a rechtstext (legal/CMS page) and its versions from
+ * /api/content/[slug], saves edits with PUT, and lets admins restore historical
+ * versions locally before saving. Operates inside the admin auth context.
+ */
 import { useState, useEffect, use } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -15,6 +22,10 @@ interface Version {
   erstellt_am: string;
 }
 
+/**
+ * Renders the rich-text CMS editor for one content slug, including title,
+ * published state, save action, and version restore panel.
+ */
 export default function ContentEditorPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const [loading, setLoading] = useState(true);
@@ -188,4 +199,3 @@ export default function ContentEditorPage({ params }: { params: Promise<{ slug: 
     </div>
   );
 }
-

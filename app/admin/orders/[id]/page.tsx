@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — order detail, /admin/orders/[id].
+ *
+ * Client component. Fetches a bestellung (order) from /api/orders/[id] and
+ * updates status or internal notes through PUT requests. Offers customer,
+ * payment, address, line-item, note, and status-management views under the
+ * admin auth context.
+ */
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import {
@@ -72,11 +80,18 @@ const paymentLabels: Record<string, string> = {
   revolut_pay: 'Revolut Pay', amazon_pay: 'Amazon Pay',
 };
 
+/**
+ * Resolves country codes stored in order address JSON to German display labels.
+ */
 function countryLabel(code: string | undefined) {
   const map: Record<string, string> = { DE: 'Deutschland', AT: 'Österreich', CH: 'Schweiz' };
   return map[code?.toUpperCase() ?? ''] || code || '';
 }
 
+/**
+ * Renders the full order administration view, including status updates that
+ * trigger customer email notifications and CRUD-style internal note handling.
+ */
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [order, setOrder] = useState<BestellungDetail | null>(null);
@@ -498,4 +513,3 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
     </div>
   );
 }
-

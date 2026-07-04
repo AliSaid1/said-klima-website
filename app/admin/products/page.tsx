@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — products list, /admin/products.
+ *
+ * Client component. Fetches paginated artikel (product) records from
+ * /api/products and resolves product image URLs from Supabase Storage. Offers
+ * search, active-state filtering, selection UI, pagination, navigation to
+ * create/edit pages, and product deletion inside the admin auth context.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,6 +16,9 @@ import StatusBadge from '@/components/admin/StatusBadge';
 import { toast } from 'sonner';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+/**
+ * Converts a product image storage path into a public Supabase Storage URL.
+ */
 function storageUrl(path: string) {
   if (path.startsWith('http')) return path;
   return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
@@ -38,6 +49,10 @@ interface Pagination {
   totalPages: number;
 }
 
+/**
+ * Renders the paginated artikel (product) management table with filters,
+ * thumbnail previews, bulk selection state, and per-row edit/delete actions.
+ */
 export default function ProductListPage() {
   const [products, setProducts] = useState<Artikel[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -297,5 +312,4 @@ export default function ProductListPage() {
     </div>
   );
 }
-
 

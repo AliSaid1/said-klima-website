@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — technicians management, /admin/technicians.
+ *
+ * Client component. Fetches techniker (technician) records from
+ * /api/technicians and creates, updates, or deletes technicians with POST, PUT,
+ * and DELETE requests. Offers technician CRUD for scheduling and service
+ * assignment workflows inside the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Save, X, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +21,10 @@ interface Techniker {
   aktiv: boolean;
 }
 
+/**
+ * Renders the technician administration list with inline creation, modal edit,
+ * active-state toggling, and deletion controls.
+ */
 export default function TechniciansPage() {
   const [technicians, setTechnicians] = useState<Techniker[]>([]);
   const [loading, setLoading] = useState(true);

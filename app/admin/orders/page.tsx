@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — orders list, /admin/orders.
+ *
+ * Client component. Fetches paginated bestellungen (orders) from /api/orders,
+ * supports CSV export via Papa Parse, and deletes open orders through
+ * /api/orders/[id]. Offers search, status filtering, pagination, export, and
+ * open-order deletion inside the admin auth context.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Search, Download, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
@@ -25,6 +33,10 @@ interface Pagination {
   totalPages: number;
 }
 
+/**
+ * Renders the order table with filters, CSV export, pagination, and safe
+ * deletion controls for orders that are still open.
+ */
 export default function OrdersListPage() {
   const [orders, setOrders] = useState<Bestellung[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -243,4 +255,3 @@ export default function OrdersListPage() {
     </div>
   );
 }
-

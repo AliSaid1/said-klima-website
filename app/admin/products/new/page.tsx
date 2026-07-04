@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * Admin — new product form, /admin/products/new.
+ *
+ * Client component. Fetches kategorie (category) and brand data from
+ * /api/categories and /api/brands, creates artikel (product) records through
+ * /api/products, and can create a brand inline through /api/brands. Offers
+ * product create actions for pricing, stock, images, variants, technical data,
+ * SEO, and shop visibility inside the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useFieldArray, FieldErrors } from 'react-hook-form';
@@ -22,6 +31,10 @@ type FormValues = z.infer<typeof createArtikelSchema>;
 interface Kategorie { id: string; name: string; slug: string }
 interface Marke { id: string; name: string }
 
+/**
+ * Renders the create-artikel (product) workflow with validation, image upload,
+ * inline brand creation, and redirect back to the product list after success.
+ */
 export default function NewProductPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);

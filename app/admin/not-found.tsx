@@ -1,6 +1,16 @@
+/**
+ * Admin — not-found boundary, /admin.
+ *
+ * Server component for unmatched admin routes. It renders a 404-style empty
+ * state within the admin auth context and links administrators back to the
+ * dashboard.
+ */
 import Link from 'next/link';
 import { SearchX } from 'lucide-react';
 
+/**
+ * Shows the admin 404 message and dashboard recovery link.
+ */
 export default function AdminNotFound() {
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -22,4 +32,3 @@ export default function AdminNotFound() {
     </div>
   );
 }
-

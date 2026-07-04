@@ -1,5 +1,13 @@
 'use client';
 
+/**
+ * Admin — services management, /admin/services.
+ *
+ * Client component. Fetches dienstleistung (service) records from /api/services
+ * and creates, updates, or deactivates them through POST, PUT, and DELETE
+ * requests. Offers service CRUD for booking-related service codes, prices,
+ * durations, descriptions, and active state inside the admin auth context.
+ */
 import { useState, useEffect } from 'react';
 import { Wrench, Plus, Edit, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,6 +25,10 @@ interface Dienstleistung {
 
 const emptyService = { code: '', name: '', beschreibung: '', basispreis_brutto: 0, steuersatz: 19, dauer_minuten: 60, aktiv: true };
 
+/**
+ * Renders service list management with inline creation, modal editing, and
+ * deactivation controls for appointment-bookable services.
+ */
 export default function ServicesPage() {
   const [services, setServices] = useState<Dienstleistung[]>([]);
   const [loading, setLoading] = useState(true);
@@ -168,4 +180,3 @@ export default function ServicesPage() {
     </div>
   );
 }
-
