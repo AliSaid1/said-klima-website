@@ -44,7 +44,7 @@ for (const route of publicRoutes) {
 
 /** The homepage's shop link navigates to /shop and loads the catalog page. */
 test('home has working navigation to the shop', async ({ page }) => {
-  await page.goto(`${BASE_URL}/`);
+  await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
   const shopLink = page.locator('a[href="/shop"]:visible').first();
   await expect(shopLink).toBeVisible();
   // Force the click: the fixed/animated header can intercept normal pointer events.
