@@ -119,11 +119,14 @@ test.describe('Account → Address management', () => {
 
   /** After adding an address the toast offers a working "Rückgängig" undo that removes it again. */
   test('offers an undo action after adding an address', async ({ page }) => {
-    await fillAddressForm(page, { strasse: 'Undo Teststraße 1', plz: '54321', ort: 'Undostadt' });
+    // Unique street per run so the assertions can't be confused by addresses
+    // left behind from earlier runs against the shared test database.
+    const street = `Undo Teststraße ${Date.now()}`;
+    await fillAddressForm(page, { strasse: street, plz: '54321', ort: 'Undostadt' });
     await page.getByRole('button', { name: 'Adresse speichern' }).click();
 
     // The new address is persisted and rendered before we undo it.
-    await expect(page.getByText('Undo Teststraße 1').first()).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(street).first()).toBeVisible({ timeout: 8000 });
 
     const undo = page.getByRole('button', { name: 'Rückgängig' }).first();
     await expect(undo).toBeVisible({ timeout: 8000 });
@@ -131,7 +134,7 @@ test.describe('Account → Address management', () => {
 
     // Undo reverses the add: the address card is gone again. Asserting the
     // end-state is more robust than racing the transient confirmation toast.
-    await expect(page.getByText('Undo Teststraße 1')).toHaveCount(0, { timeout: 8000 });
+    await expect(page.getByText(street)).toHaveCount(0, { timeout: 8000 });
   });
 
   /** Submitting an empty form surfaces the required-fields validation message. */
