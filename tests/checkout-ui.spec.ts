@@ -45,27 +45,40 @@ test.describe('Checkout → Stripe', () => {
       .first();
     await expect(checkoutButton).toBeVisible();
 
-    // Capture the /api/checkout response directly rather than waiting for the
-    // external Stripe page to load (which is slow/unreliable in CI). This still
-    // exercises the full UI → API → Stripe session-creation path and surfaces
-    // the server error message if session creation fails.
-    const [resp] = await Promise.all([
-      page.waitForResponse(
-        (r) => r.url().includes('/api/checkout') && r.request().method() === 'POST',
-        { timeout: 30_000 },
-      ),
-      checkoutButton.click(),
-    ]);
+    // Intercept the /api/checkout POST and read its body *inside* the route
+    // handler (via route.fetch()). This is immune to the page navigating away:
+    // on success the app sets window.location.href to the Stripe URL, which
+    // would otherwise destroy the fetch response before we can read it (that
+    // race made the body come back empty). We then fulfill with the URL removed
+    // so the browser doesn't navigate to the slow external Stripe page — we've
+    // already captured the definitive result.
+    let apiStatus = 0;
+    let apiBody: any = null;
+    await page.route('**/api/checkout', async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      const response = await route.fetch();
+      apiStatus = response.status();
+      apiBody = await response.json().catch(() => ({}));
+      await route.fulfill({
+        response,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...apiBody, url: undefined }),
+      });
+    });
 
-    const body = await resp.json().catch(() => ({}));
-    const info = `checkout ${resp.status()}: ${JSON.stringify(body)}`;
-    expect(resp.status(), info).toBe(200);
+    await checkoutButton.click();
+
+    await expect
+      .poll(() => apiStatus, { timeout: 30_000 })
+      .toBeGreaterThan(0);
+    const info = `checkout ${apiStatus}: ${JSON.stringify(apiBody)}`;
+    expect(apiStatus, info).toBe(200);
     // A real Stripe Checkout Session was created (cs_… id) — the definitive
     // success signal that "Zur Kasse" reached Stripe. The hosted `url` is also
     // asserted when Stripe returns one.
-    expect(String(body.session_id), info).toMatch(/^cs_/);
-    if (body.url) {
-      expect(String(body.url)).toContain('checkout.stripe.com');
+    expect(String(apiBody?.session_id), info).toMatch(/^cs_/);
+    if (apiBody?.url) {
+      expect(String(apiBody.url)).toContain('checkout.stripe.com');
     }
   });
 });
