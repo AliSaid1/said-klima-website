@@ -10,6 +10,7 @@ next-env.d.ts
 
 .env*
 !.env.example
+!.env.e2e.local.example
 
 # Temp reorg/inventory artifacts (not source)
 md_inventory.txt

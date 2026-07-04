@@ -10,11 +10,13 @@
     "check:encoding": "node scripts/check-encoding.mjs",
     "clean": "next clean",
     "test": "playwright test",
+    "test:e2e": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 PORT=3100 BASE_URL=http://localhost:3100 playwright test --project=chromium",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "migrate": "node -r dotenv/config scripts/apply-migrations.mjs",
     "migrate:tls": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/apply-migrations.mjs",
-    "seed:test": "node -r dotenv/config scripts/seed-test-db.mjs"
+    "seed:test": "node -r dotenv/config scripts/seed-test-db.mjs",
+    "seed:test:e2e": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/seed-test-db.mjs dotenv_config_path=.env.e2e.local"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
