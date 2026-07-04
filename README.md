@@ -25,11 +25,12 @@ for a German refrigeration & air-conditioning business.
 4. [Tech Stack](#-tech-stack)
 5. [Architecture](#-architecture)
 6. [Security](#-security)
-7. [How it was built — DDAD](#-how-it-was-built--documentation-driven-agentic-development-ddad)
-8. [Documentation](#-documentation)
-9. [Run locally](#-run-locally)
-10. [Challenges & Lessons Learned](#-challenges--lessons-learned)
-11. [Possible Next Steps](#-possible-next-steps)
+7. [Testing & CI](#-testing--ci)
+8. [How it was built — DDAD](#-how-it-was-built--documentation-driven-agentic-development-ddad)
+9. [Documentation](#-documentation)
+10. [Run locally](#-run-locally)
+11. [Challenges & Lessons Learned](#-challenges--lessons-learned)
+12. [Possible Next Steps](#-possible-next-steps)
 
 ---
 
@@ -159,6 +160,44 @@ Reusable modules: `lib/rate-limit.ts`, `lib/sanitize.ts`, `lib/auth-guard.ts`, `
 
 ---
 
+## 🧪 Testing & CI
+
+Quality is enforced by an automated **[Playwright](https://playwright.dev/)** end-to-end
+suite. **CI (Continuous Integration)** means that on **every push and pull request**,
+GitHub Actions automatically seeds an isolated test database, builds the app, and runs
+the entire test suite — so regressions are caught *before* they can reach production.
+
+| | |
+| --- | --- |
+| **Tests** | **77 end-to-end tests** across **15 spec files** |
+| **Runner** | Playwright (`@playwright/test`) — Chromium in CI, full browser matrix locally |
+| **Scope** | Stripe Checkout **+ signed webhooks**, checkout **pricing integrity** & input validation, auth, admin back-office, catalog, cart, bookings, contact, public smoke |
+| **Pipeline** | [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) — seed test DB → build → run suite → upload HTML report (runs on every push/PR to `main` & `develop`) |
+| **Test DB** | A **dedicated, isolated Supabase project**, reset & re-seeded deterministically on every run (never touches production) |
+
+Tests are organized by **business criticality** — 🔴 critical (payments, security),
+🟠 high (auth, catalog, cart, bookings, contact), 🟡 medium (public smoke). The payment
+path is the most heavily covered: signed Stripe webhook events (success, delayed, failed,
+expired, idempotency), server-side price integrity (client-supplied prices are ignored),
+shipping thresholds, and request validation.
+
+**📖 Where to find the tests & their documentation:**
+
+| Resource | Location |
+| --- | --- |
+| ✅ The tests themselves | [`tests/`](tests/) — 15 `*.spec.ts` files |
+| 📘 **E2E Testing Guide** | [`docs/tests/E2E_TESTING.md`](docs/tests/E2E_TESTING.md) — every suite explained, criticality map, how to run locally, coverage gaps & a full change log |
+| ⚙️ **CI Setup** | [`docs/tests/CI_SETUP.md`](docs/tests/CI_SETUP.md) — what the pipeline does and how the isolated test database is seeded |
+| 🔧 Workflow definition | [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) |
+
+```bash
+npm test          # full Playwright suite (all browsers)
+npm run test:e2e  # Chromium only, rate-limiting disabled — mirrors CI
+npm run e2e       # seed the isolated test DB, then run the suite
+```
+
+---
+
 ## 🧭 How it was built — Documentation-Driven Agentic Development (DDAD)
 
 This project was developed through a deliberate, documented **AI-agent workflow** in which
@@ -186,6 +225,8 @@ Deeper engineering documentation lives in the **[`docs/`](docs/)** folder — st
 | Document | What's inside |
 | --- | --- |
 | [`docs/DB_STRUCTURE.md`](docs/DB_STRUCTURE.md) | Database schema & data model — verified against the live DB |
+| [`docs/tests/E2E_TESTING.md`](docs/tests/E2E_TESTING.md) | E2E test suite (77 tests): criticality map, how to run, coverage & change log |
+| [`docs/tests/CI_SETUP.md`](docs/tests/CI_SETUP.md) | CI pipeline & isolated test-DB seeding |
 | [`docs/security/SECURITY_AUDIT.md`](docs/security/SECURITY_AUDIT.md) | Full security audit: 28 findings → fixes |
 | [`docs/STRIPE_SKILLS.md`](docs/STRIPE_SKILLS.md) | Scoped Stripe domain "skill pack" used during the build |
 | [`docs/plans/`](docs/plans/) | Feature design docs / RFCs (checkout, invoices, email branding, deployment) |
@@ -209,8 +250,13 @@ npm run dev
 | --- | --- |
 | `npm run dev` | Start the dev server |
 | `npm run build` / `npm start` | Production build / serve |
-| `npm run test` | Playwright E2E tests |
+| `npm run test` | Playwright E2E tests (full browser matrix) |
+| `npm run test:e2e` | E2E on Chromium with rate-limiting disabled (mirrors CI) |
+| `npm run e2e` | Seed the isolated test DB, then run the suite |
 | `npm run migrate` | Apply Supabase migrations |
+
+> 🧪 See **[Testing & CI](#-testing--ci)** and the
+> **[E2E Testing Guide](docs/tests/E2E_TESTING.md)** for the full suite and how it runs.
 
 ---
 
@@ -248,7 +294,7 @@ npm run dev
 - Nonce-based CSP to remove `'unsafe-inline'`/`'unsafe-eval'` in production.
 - Role granularity (e.g. an `editor` role with scoped permissions).
 - GDPR consent logging (`einwilligungen`) if marketing emails are added.
-- Broader automated test coverage (checkout + booking happy paths in CI).
+- Booking happy-path E2E coverage + visual-regression tests (checkout, pricing & webhooks are already covered).
 
 ---
 

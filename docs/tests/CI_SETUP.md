@@ -2,8 +2,8 @@
 
 This describes the one-time setup that lets the
 [`.github/workflows/e2e.yml`](../../.github/workflows/e2e.yml) workflow run the
-full Playwright suite (including the admin- and catalog-gated tests) on every
-push / PR to `main`.
+full Playwright suite (**77 tests across 15 spec files**, including the payment,
+admin- and catalog-gated tests) on every push / PR to `main` and `develop`.
 
 ---
 
@@ -135,8 +135,16 @@ committed baseline and resets the admin user's password each time.
   `upload.spec.ts` needs Storage + editor access and is opt-in via
   `RUN_UPLOAD_E2E=1`. Neither is part of the default CI scope (admin +
   add-to-cart + public smoke).
-- **Stripe / booking flows** are not exercised by the current suite (checkout
-  stops before Stripe). See the "Optional next steps" in
-  [E2E_TESTING.md](./E2E_TESTING.md#6-optional-next-steps-expanding-coverage).
+- **Stripe payment flows are covered.** The suite exercises Stripe Checkout
+  session creation, server-side pricing integrity, checkout input validation,
+  and **signed Stripe webhook events** (success, delayed/async, failed, expired,
+  and idempotency). Webhook success-path tests create a real session via
+  `/api/checkout` and post signed events; failure/expiry paths use synthetic
+  signed events. See [E2E_TESTING.md](./E2E_TESTING.md).
+- **Rate limiting in the suite.** The workflow sets `DISABLE_RATE_LIMIT=1` so
+  Playwright's many same-IP POSTs don't trip the per-IP limits and cause flaky
+  `429`s. The flag is honored in both `middleware.ts` and `lib/rate-limit.ts`
+  (the latter covers routes that call the limiter directly, e.g. `/api/contact`).
+  It is **never** set in production.
 - **Browsers.** CI is pinned to Chromium for speed/stability. Run the full
-  matrix locally with `npm test`.
+  matrix (incl. Firefox, WebKit, Mobile Chrome, Mobile Safari) locally with `npm test`.

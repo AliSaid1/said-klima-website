@@ -6,10 +6,21 @@ the deeper engineering and process documentation, grouped by purpose.
 ## 🏛️ Core references
 
 - [Database Schema & Data Model](DB_STRUCTURE.md) — source-of-truth schema, verified against the live DB
+- [Tech Stack](TECH_STACK.md) — frameworks, services & libraries used
 - [Security Audit (28 findings → fixes)](security/SECURITY_AUDIT.md)
 - [Security Findings — Explained for Humans](security/SECURITY_FINDINGS_EXPLAINED.md) — plain-English "what/why/how" for each finding
 - [Security Action Items & Production Setup](security/SECURITY_ACTION_ITEMS.md) — open tasks checklist
 - [Stripe Skill Pack](STRIPE_SKILLS.md) — scoped domain rules used for all Stripe work
+
+## 🧪 Testing & CI
+
+- [E2E Testing Guide](tests/E2E_TESTING.md) — the Playwright suite (**77 tests / 15 spec files**): criticality map, how to run locally, coverage gaps & change log
+- [CI Setup](tests/CI_SETUP.md) — what the GitHub Actions pipeline does and how the isolated test database is seeded
+- Workflow: [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml) — runs the suite on every push/PR
+
+## 🚀 Deployment
+
+- [Deployment & Staging Guide](DEPLOYMENT.md) — Vercel deploy, environments, staging & test credentials
 
 ## 🗺️ Feature plans & design docs (RFCs)
 
