@@ -1,10 +1,14 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config as loadEnv } from 'dotenv';
 
 /**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
+ * Load local env files so gated tests (admin/customer/Stripe) pick up
+ * credentials from `.env.local` when running on a dev machine. dotenv does NOT
+ * override variables already present in the environment, so in CI the GitHub
+ * Actions secrets remain authoritative and these calls are effectively no-ops.
  */
-// require('dotenv').config();
+loadEnv({ path: '.env.local' });
+loadEnv();
 
 /**
  * See https://playwright.dev/docs/test-configuration.

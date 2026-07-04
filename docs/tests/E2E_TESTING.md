@@ -42,6 +42,7 @@ the seeded test project); ⏭️ marks an opt-in test that is intentionally skip
 | 🟠 High | `shop-cart.spec.ts` | Customers can't build an order |
 | 🟠 High | `cart-operations.spec.ts` | Cart edits/persistence broken |
 | 🟠 High | `account-addresses.spec.ts` | Customers can't manage delivery addresses |
+| 🟠 High | `auth.spec.ts` | Customers can't log in or register (no new accounts, no access) |
 | 🟡 Medium | `public-smoke.spec.ts` | A public page is down / erroring |
 | ⚪ Low | `upload.spec.ts` (opt-in) | Admin rich-text image upload |
 
@@ -171,6 +172,20 @@ addresses (provisioned by `scripts/seed-test-db.mjs`).
 - ✅ offers an undo action after adding
 - ✅ validates required fields on submit
 
+**`tests/auth.spec.ts` — customer login & registration** (Supabase Auth)
+Covers `/account/login` and `/account/register`. UI assertions run everywhere;
+the network paths are gated (see notes).
+- ✅ **Always runs:** the login form renders with register + "Passwort vergessen" links
+- ✅ *(Supabase anon)* wrong credentials → error toast, stays on `/account/login`
+- ✅ *(`TEST_USER_*`)* the seeded customer logs in → success toast + redirect home
+- ✅ **Always runs:** the registration form renders with a link back to login
+- ✅ **Always runs:** mismatched passwords are rejected client-side (no network call)
+- ✅ *(Supabase anon + service role)* a new sign-up shows the confirm-email
+  screen; the throwaway user is deleted afterwards via the admin API
+- ⚠️ The empty-field "please fill in" toast is unreachable — the inputs are
+  `required`, so the browser's native validation blocks the submit first (by
+  design; not asserted).
+
 ### 🟡 Medium
 
 **`tests/public-smoke.spec.ts` — public site** (no auth, no seeded data)
@@ -243,7 +258,7 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-64 passed, 1 skipped
+70 passed, 1 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
@@ -253,6 +268,8 @@ the customer `kunde` user is auto-seeded):
   - passed:  2 shop-cart (add-to-cart, empty cart)
   - passed:  3 cart-operations (remove, quantity, persistence)
   - passed:  7 account-addresses (customer address CRUD)
+  - passed:  6 auth (login render, wrong creds, seeded login, register render,
+             password mismatch, sign-up + cleanup)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
   - passed:  4 checkout-pricing (client price ignored, discount, variant, unknown variant)
   - passed: 10 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed,
@@ -403,6 +420,10 @@ Status legend: ✅ automated & asserting an end state · ⚠️ partial / up-to-
 | 2025-02   | Checkout validation | Quantity above per-line cap (`menge: 1000`) → `400`                                                      | `tests/checkout-validation.spec.ts` | ✅  |
 | 2025-02   | Checkout validation | Non-integer quantity (`menge: 1.5`) → `400`                                                              | `tests/checkout-validation.spec.ts` | ✅  |
 | 2025-02   | Test helpers        | Added `paymentIntentEvent`, `seedPayment`, `deletePayments`; unique `bestellnummer` suffix (parallel-safe) | `tests/helpers/stripe.ts`        | ✅     |
+| 2026-07   | Auth                | Customer **login** flow: form render, wrong-credentials error toast, seeded-user success + redirect        | `tests/auth.spec.ts`             | ✅     |
+| 2026-07   | Auth                | Customer **registration** flow: form render, client-side password-mismatch, successful sign-up + cleanup    | `tests/auth.spec.ts`             | ✅     |
+| 2026-07   | Auth helpers        | Added `supabaseConfigured`, `serviceRoleConfigured`, `deleteAuthUserByEmail`, customer-cred exports          | `tests/helpers/auth.ts`          | ✅     |
+| 2026-07   | Test config         | `playwright.config.ts` now auto-loads `.env.local` (dotenv) so local gated tests pick up credentials         | `playwright.config.ts`           | ✅     |
 
 ### 8.3 Known coverage gaps (accepted)
 
