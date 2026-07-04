@@ -64,12 +64,13 @@ broke. Today you'd only notice from the red badge — after it's already live.
 
 ## 2. Recommended flow (small change, big safety win)
 
-Introduce a `develop`/feature branch and let Pull Requests be the gate. The E2E
-workflow **already** runs on `pull_request → main`, so most of this is just
-turning on branch protection.
+Introduce a feature branch and let Pull Requests be the gate. The E2E workflow
+**already** runs on `pull_request → main`, so on the Free plan this needs *no
+setup at all* — the only "rule" is your own habit of not merging on red (see §3
+for why that's fine, and the paid/hard-gate alternatives).
 
 ```
-   feature/xyz  (or develop)
+   feature/xyz
         │  git push
         ▼
    ┌─────────────────────────────┐        ┌───────────────────────────────┐
@@ -79,78 +80,81 @@ turning on branch protection.
         ▼
    ┌─────────────────────────────┐
    │  GitHub Actions E2E on PR   │   ✅ green  ─┐
-   └─────────────────────────────┘             │  branch protection:
-        │                                       │  "require E2E to pass"
-        ▼                                       ▼
-   ❌ red  →  merge blocked            ✅  →  Merge PR to main
+   └─────────────────────────────┘             │  you check the result
+        │                                       │  (auto-blocked only on
+        ▼                                       │   paid/public — see §3)
+   ❌ red  →  don't merge, fix first   ✅  →  Merge PR to main
                                                  │
                                                  ▼
                                       Vercel PRODUCTION deploy
                                       (only ever from green code)
 ```
 
-Benefits:
-- **Bad code can't reach production** — the merge is blocked until E2E is green.
+Benefits (all free on your plan):
+- **Bad code stays off production** — you only merge green PRs.
 - **Preview URLs** let you click through the real change before it's live.
 - **`main` stays deployable** at all times.
-- You still work alone and merge your own PRs — it's a 30-second habit, not
+- You work alone and merge your own PRs — it's a 30-second habit, not
   bureaucracy.
 
 ---
 
-## 3. Branch protection vs. wiring Vercel to gate on CI — which is better?
+## 3. Which approach on the **Free** plan? (important constraint)
 
-Short answer: **branch protection is both easier and better** for this project.
-Do that. Wiring Vercel to gate on CI is more work, partly redundant, and only
-worth it as an *extra* layer later.
+> ⚠️ **GitHub branch protection / rulesets are _not enforced_ on a _private_
+> repo on the Free plan.** They only enforce for **public** repos, or for
+> **private** repos on **Pro/Team/Enterprise**. That's the message you saw:
+> _"Your rulesets won't be enforced until you move to a GitHub Team account."_
+> So Option A (below) can't technically *block* a merge on your current plan.
 
-| | **A. Branch protection** (recommended) | **B. Wire Vercel to gate on CI** |
-| --- | --- | --- |
-| Where it lives | GitHub (a few checkboxes) | Vercel build settings + a script / GitHub deploy job |
-| Effort | ~2 minutes, no code | Moderate: custom "Ignored Build Step" or a GH Actions deploy pipeline |
-| What it stops | Bad code from **merging into `main`** (so it never deploys) | A bad commit already on `main` from being **promoted** |
-| Preview URLs | ✅ yes (per PR) | ✅ yes |
-| Redundancy | — | Mostly redundant *if* you already have branch protection |
-| Failure mode | Simple: red check = can't merge | More moving parts to debug |
+Good news: you don't need a paid plan to get a safe flow. Here are the three
+realistic options and what each costs.
 
-**Why A wins:** branch protection stops the problem at the source — nothing bad
-ever reaches `main`, so Vercel only ever deploys green code. Option B tries to
-catch the problem *after* it's already on `main`, which is later and fiddlier.
-Since you deploy `main`, guarding `main` is exactly the right lever.
+| | **A. GitHub branch protection** | **B. Vercel gates the deploy** | **C. PR + Preview + discipline** ✅ |
+| --- | --- | --- | --- |
+| Free on your plan? | ❌ not for private repos (needs Team, or make repo public) | ✅ yes (Vercel Hobby + GH Actions) | ✅ yes |
+| Hard technical block? | ✅ (if you could use it) | ✅ | ⚠️ self-enforced (you just don't click merge) |
+| Effort | low, but paywalled | medium (script/CLI + token) | lowest — a habit, no setup |
+| Extra moving parts | none | Vercel token, build script | none |
 
-> Keep B in your back pocket only if you later want a hard technical block on
-> promotion (e.g. multiple people pushing directly to `main`). For a solo dev
-> with the PR habit, A is enough.
+**Recommendation for you: Option C.** As the **sole developer**, enforcement
+mainly exists to stop *other* people from merging bad code — you don't have that
+problem. Everything valuable in the "safe flow" is already free:
+
+- GitHub **Actions still runs** your E2E on every branch/PR (Free plan includes
+  ~2,000 Actions minutes/month for private repos — you're nowhere near it), so
+  you still get the ✅/❌ signal on the PR.
+- Vercel **Preview Deployments are free** on Hobby — every branch/PR gets its own
+  URL to click-test before it's live.
+- You simply **don't merge to `main` while the check is red.** For one person,
+  that discipline is as good as an automated block.
+
+If you later want a *hard* block without paying GitHub, add **Option B** on top
+(§5) — it's free on Vercel. And if you ever want GitHub-native enforcement for
+free, the only way is to **make the repo public** (not recommended for a
+commercial client codebase).
+
+### So… should you revert the ruleset you created?
+
+You don't have to. It's simply **inert** on your plan — it neither helps nor
+hurts right now.
+- **Keep it** if you might make the repo public or upgrade to Team later; it will
+  start enforcing automatically then. Zero cost to leave it.
+- **Delete it** if you'd rather avoid a false sense of security / keep settings
+  tidy. Either choice is fine — reverting is optional.
 
 ---
 
-## 4. Step-by-step: set up branch protection (Option A)
+## 4. Recommended free workflow (Option C) — step by step
 
-**One-time GitHub setup:**
+**One-time (optional but tidy):** in Vercel → Project → Settings →
+**Build and Deployment** (Production Branch), confirm the **Production Branch is
+`main`**. Preview Deployments for other branches are on by default.
 
-1. Push at least one PR first so GitHub "knows" the check name. If you've never
-   opened a PR, do the branch step below once; the **"Playwright E2E"** check
-   appears in the list only after it has run against a PR at least once.
-2. Go to **GitHub → your repo → Settings → Branches**.
-3. Under **Branch protection rules**, click **Add branch ruleset** (or *Add
-   rule* in the classic UI).
-4. **Branch name pattern:** `main`.
-5. Tick these:
-   - ✅ **Require a pull request before merging**
-     - (solo dev) set *Required approvals* to **0** — you don't need to approve
-       your own PRs, you just need the checks to pass.
-   - ✅ **Require status checks to pass before merging**
-     - In the search box, add **`Playwright E2E`** (the job `name:` from
-       `.github/workflows/e2e.yml`).
-     - ✅ (optional) **Require branches to be up to date before merging.**
-   - ✅ (optional) **Do not allow bypassing the above settings** — if you leave
-     this *unticked*, you as admin can still force-merge in an emergency.
-6. **Save changes.**
-
-**Your day-to-day workflow after that:**
+**Every change:**
 
 ```bash
-# 1. start work on a branch (never commit straight to main)
+# 1. work on a branch — don't commit straight to main
 git checkout -b feature/my-change
 
 # 2. commit + push
@@ -158,34 +162,45 @@ git add -A
 git commit -m "..."
 git push -u origin feature/my-change
 
-# 3. open a PR on GitHub (the link is printed by the push, or use the GitHub UI)
-#    → GitHub runs the E2E workflow automatically
-#    → Vercel posts a Preview URL on the PR — click it to test the change live
+# 3. open a PR on GitHub (the push prints a link, or use the GitHub UI)
+#    → GitHub Actions runs the E2E workflow automatically (free)
+#    → Vercel posts a free Preview URL on the PR — open it and test the change live
 
-# 4. when the E2E check is green, click "Merge pull request"
+# 4. only when the E2E check is GREEN, merge the PR
 #    → merging into main triggers the Vercel PRODUCTION deploy
+
+# 5. delete the branch (GitHub offers a button after merge), then locally:
+git checkout main && git pull
 ```
 
-That's it. If E2E is red, the **Merge** button is disabled until you fix it —
-production stays safe.
+The whole safety benefit — isolated work, automated tests, a live preview, and a
+clean `main` — is free. The only thing you give up vs. a paid plan is the
+automatic *merge block*, which you replace with "don't click merge on red."
+
+> Tip: you can still push tiny fixes straight to `main` when you want the old
+> speed — the choice is yours per-change, since nothing forces the PR.
 
 ---
 
-## 5. (Optional) Step-by-step: gate Vercel on CI (Option B)
+## 5. (Optional) Add a real free hard-gate with Vercel (Option B)
 
-Only if you want the extra technical block. Two common ways:
+Only if you want production promotion to be *technically* blocked on red CI,
+without paying GitHub. Both sub-options are free on Vercel Hobby.
 
-**B1 — Ignored Build Step (simplest Vercel-side option):**
-1. Vercel → Project → **Settings → Git → Ignored Build Step**.
-2. Set it to a command that **exits 0 to build, non-zero to skip**. Vercel only
-   proceeds when the command "passes". You can point it at a check of the commit
-   status via the GitHub API, or a simple guard script committed to the repo.
+**B1 — Ignored Build Step (simplest):**
+1. Vercel → Project → Settings → **Build and Deployment → Ignored Build Step**
+   (or `git.ignoreCommand` in `vercel.json`).
+2. Provide a command that decides whether to build. Vercel's convention is
+   **exit code `1` → build proceeds, exit code `0` → build is skipped/cancelled.**
+3. Have that command check the commit's GitHub status (via the commit-status API
+   with a token) and exit `0` (skip) when E2E hasn't passed. Result: a red commit
+   never gets promoted to production.
 
 **B2 — Deploy from GitHub Actions (full control):**
-1. Turn **off** Vercel's automatic Git deployments for production (Settings →
-   Git), or restrict it to previews.
-2. Add a deploy job to the workflow that runs **after** the E2E job and only on
-   `main`, using the Vercel CLI:
+1. Turn **off** Vercel's automatic production deployments (Settings → Git), or
+   keep it for Previews only.
+2. Add a deploy job that runs **after** E2E and only on `main`, using the free
+   Vercel CLI + a `VERCEL_TOKEN`:
    ```yaml
    deploy:
      needs: e2e          # ← only runs if E2E passed
@@ -202,10 +217,15 @@ Only if you want the extra technical block. Two common ways:
        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
    ```
-   This makes production deploys literally depend on green E2E — but it's more to
-   maintain, which is why Option A is the recommended starting point.
+   This makes production deploys literally depend on green E2E. It's free, but
+   it's the most moving parts — only add it if you want the hard guarantee.
 
-**Escape hatch (either option):** if a bad deploy ever slips through, use
+> **Note on Vercel Hobby:** these mechanisms are all free, but Vercel's Hobby
+> plan is intended for **non-commercial** use. A real business site may need
+> **Pro** regardless of which gating option you choose — that's a plan/licensing
+> matter, independent of A/B/C.
+
+**Escape hatch (any option):** if a bad deploy ever slips through, use
 Vercel → Deployments → **Instant Rollback** to re-promote the last good build in
 seconds (no rebuild needed).
 
