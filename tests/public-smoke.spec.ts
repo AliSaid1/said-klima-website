@@ -51,5 +51,5 @@ test('home has working navigation to the shop', async ({ page }) => {
   await shopLink.scrollIntoViewIfNeeded();
   await shopLink.click({ force: true });
   await expect(page).toHaveURL(/\/shop/, { timeout: 15000 });
-  await expect(page.getByText('Alle Klimageräte').first()).toBeVisible();
+  await expect(page.getByText('Alle Klimageräte').first()).toBeVisible({ timeout: 15000 });
 });

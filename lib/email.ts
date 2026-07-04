@@ -315,7 +315,8 @@ export async function sendOrderConfirmation(params: {
     });
   }
 
-  return sendTemplateEmail({
+  // Try the DB-managed template first.
+  const templateResult = await sendTemplateEmail({
     to: params.to,
     templateType: 'bestellung_bestaetigung',
     variables: {
@@ -325,6 +326,66 @@ export async function sendOrderConfirmation(params: {
     },
     attachments,
   });
+
+  if (templateResult.success) return templateResult;
+
+  // Fallback: inline HTML email. Without this, a missing/renamed
+  // `bestellung_bestaetigung` row in `email_vorlagen` would silently drop the
+  // order confirmation (the PDF still generates, but the customer gets no mail).
+  console.warn('[EMAIL] Order-confirmation DB template not found, using inline template');
+  const firma = await getCompanyInfo();
+
+  const content = `
+    <h2 style="margin:0 0 8px;color:#1e293b;font-size:20px;">Bestellung bestätigt! 🎉</h2>
+    <p style="margin:0 0 24px;color:#64748b;font-size:15px;">Hallo ${params.kundenname}, vielen Dank für Ihre Bestellung.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <tr><td>
+        <table width="100%" cellpadding="8" cellspacing="0">
+          <tr>
+            <td style="color:#64748b;font-size:13px;font-weight:600;width:140px;vertical-align:top;">Bestellnummer</td>
+            <td style="color:#1e293b;font-size:14px;font-weight:500;">${params.bestellnummer}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;font-size:13px;font-weight:600;vertical-align:top;">Gesamtbetrag</td>
+            <td style="color:#1e293b;font-size:14px;font-weight:500;">${params.gesamt}</td>
+          </tr>
+          <tr>
+            <td style="color:#64748b;font-size:13px;font-weight:600;vertical-align:top;">Status</td>
+            <td>
+              <span style="display:inline-block;padding:4px 12px;background:#DCFCE7;color:#166534;border-radius:20px;font-size:12px;font-weight:600;">
+                ✓ Bezahlt
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+
+    <p style="margin:0;color:#64748b;font-size:14px;">
+      Ihre Bestellbestätigung finden Sie im PDF-Anhang. Wir bearbeiten Ihre Bestellung schnellstmöglich und melden uns bei Rückfragen.
+    </p>
+  `;
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: emailFrom(firma.name),
+      replyTo: EMAIL_REPLY_TO,
+      to: [params.to],
+      subject: `Bestellbestätigung — ${params.bestellnummer}`,
+      html: emailWrapper(content, firma),
+      ...(attachments.length ? { attachments } : {}),
+    });
+
+    if (error) {
+      console.error('Inline order-confirmation send error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    console.error('Inline order-confirmation exception:', err);
+    return { success: false, error: err?.message || 'Unknown error' };
+  }
 }
 
 /**

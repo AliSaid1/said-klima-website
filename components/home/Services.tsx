@@ -40,7 +40,7 @@ const services = [
  * description while keeping the list keyboard-agnostic and click-driven.
  */
 export default function Services() {
-  const [activeService, setActiveService] = useState(services[1].id);
+  const [activeService, setActiveService] = useState(services[0].id);
 
   const currentService = services.find(s => s.id === activeService) || services[0];
 
