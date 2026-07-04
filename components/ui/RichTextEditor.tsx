@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Client component module for rich-text CMS editing.
+ * Wraps Tiptap with formatting controls, table manipulation, image/PDF upload,
+ * paste handling, and scoped editor content styles.
+ */
+
 import React, { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -21,11 +27,27 @@ import {
 import { toast } from 'sonner';
 
 interface Props {
+  /** Controlled HTML value supplied by the parent form. */
   value?: string;
+  /** Emits updated HTML whenever the Tiptap document changes. */
   onChange?: (html: string) => void;
+  /** CSS min-height for the editable content area. */
   minHeight?: string;
 }
 
+/**
+ * Renders a rich-text editor as a client component.
+ *
+ * Initializes Tiptap with headings, lists, links, images, tables, underline,
+ * history, and placeholder support; synchronizes controlled external HTML;
+ * uploads pasted images to `/api/upload`; and inserts uploaded images or PDF
+ * links through the toolbar.
+ *
+ * @param props - Component props.
+ * @param props.value - Controlled HTML content.
+ * @param props.onChange - Callback receiving the current HTML document.
+ * @param props.minHeight - Minimum editor viewport height.
+ */
 export default function RichTextEditor({ value = '', onChange, minHeight = '400px' }: Props) {
   const lastExternalValue = useRef(value);
 
@@ -359,4 +381,3 @@ export default function RichTextEditor({ value = '', onChange, minHeight = '400p
     </div>
   );
 }
-

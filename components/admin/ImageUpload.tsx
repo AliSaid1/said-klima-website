@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Client component module for admin image upload and media-library selection.
+ * It manages artikel (product) image attachments, upload progress, alt text,
+ * media search, and selection limits for editable admin forms.
+ */
+
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, GripVertical, Loader2, ImageIcon, Search } from 'lucide-react';
@@ -7,29 +13,57 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 
 interface UploadedImage {
+  /** Existing artikel_bilder row id when editing a saved image relation. */
   id?: string;
+  /** Media-file id stored in the backend dateien/media table. */
   datei_id?: string;
+  /** Public image URL used for preview rendering. */
   url: string;
+  /** Optional alternative text saved with the product image relation. */
   alt_text?: string;
+  /** Zero-based display order, with 0 treated as the Hauptbild (main image). */
   anzeige_reihenfolge: number;
 }
 
 interface MediaFile {
+  /** Unique media-file id returned by the media API. */
   id: string;
+  /** Public URL for previewing or selecting the stored file. */
   url: string;
+  /** Storage path used for media-library search and display. */
   speicherpfad: string;
+  /** MIME type recorded for the uploaded file. */
   mime_type: string;
+  /** File size in bytes. */
   groesse_bytes: number;
+  /** Creation timestamp from the media backend. */
   erstellt_am: string;
 }
 
 interface ImageUploadProps {
+  /** Current list of selected/uploaded images controlled by the parent form. */
   images: UploadedImage[];
+  /** Emits the complete updated image list after upload, removal, alt text edit, or library selection. */
   onChange: (images: UploadedImage[]) => void;
+  /** Storage bucket passed to the upload API; defaults to product-images. */
   bucket?: string;
+  /** Maximum number of images accepted by upload and media-library selection. */
   maxFiles?: number;
 }
 
+/**
+ * Renders a controlled admin image manager as a client component.
+ *
+ * Supports drag-and-drop uploads to `/api/upload`, preview cards with editable
+ * alt text, duplicate-safe selection from `/api/media`, search within the
+ * Medienbibliothek (media library), and max-file enforcement.
+ *
+ * @param props - Component props.
+ * @param props.images - Selected artikel (product) image relations.
+ * @param props.onChange - Callback receiving the next complete image list.
+ * @param props.bucket - Upload bucket name used by the API.
+ * @param props.maxFiles - Maximum selectable image count.
+ */
 export default function ImageUpload({ images, onChange, bucket = 'product-images', maxFiles = 10 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
@@ -326,4 +360,3 @@ export default function ImageUpload({ images, onChange, bucket = 'product-images
     </div>
   );
 }
-

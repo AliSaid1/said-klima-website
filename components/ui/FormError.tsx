@@ -1,8 +1,14 @@
 'use client';
 
+/**
+ * Client component module for field-level form validation messages.
+ * Renders accessible inline errors beneath inputs in admin and customer forms.
+ */
+
 interface FormErrorProps {
   /** The error message string — usually from react-hook-form `errors.field?.message` */
   message?: string;
+  /** Additional Tailwind classes appended to the error paragraph. */
   className?: string;
 }
 
@@ -14,6 +20,10 @@ interface FormErrorProps {
  * @example
  * <input {...register('artikelnummer')} ... />
  * <FormError message={errors.artikelnummer?.message} />
+ *
+ * @param props - Component props.
+ * @param props.message - Validation message to display.
+ * @param props.className - Optional additional CSS classes.
  */
 export default function FormError({ message, className = '' }: FormErrorProps) {
   if (!message) return null;
@@ -25,4 +35,3 @@ export default function FormError({ message, className = '' }: FormErrorProps) {
     </p>
   );
 }
-

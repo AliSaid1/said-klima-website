@@ -1,7 +1,20 @@
+/**
+ * Homepage hero module for the public landing page.
+ * Presents the primary climate-control value proposition and entry points to
+ * the shop and service inquiry flows.
+ */
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { ShoppingBag, CalendarDays } from 'lucide-react';
 
+/**
+ * Renders the public homepage hero as a server component.
+ *
+ * Uses a priority background image, readable gradient overlay, headline copy,
+ * and two prominent calls to action: product discovery and service Anfrage
+ * (inquiry).
+ */
 export default function Hero() {
   return (
     <section className="relative pt-20 pb-32 lg:pt-32 lg:pb-48 overflow-hidden bg-slate-900 min-h-[90vh] flex items-center">
@@ -55,4 +68,3 @@ export default function Hero() {
     </section>
   );
 }
-

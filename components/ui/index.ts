@@ -1,3 +1,9 @@
+/**
+ * Barrel module for shared UI primitives.
+ * Re-exports loading skeletons and feedback components for forms, admin pages,
+ * and customer-facing flows.
+ */
+
 // export { default as RichTextEditor } from './RichTextEditor';
 // export { default as Skeleton } from './Skeleton';
 

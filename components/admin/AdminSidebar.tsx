@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Client component module for the authenticated admin navigation sidebar.
+ * It centralizes admin route links, active-route highlighting, mobile drawer
+ * behavior, and Supabase sign-out handling.
+ */
+
 import { memo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -37,10 +43,22 @@ const navItems = [
 ];
 
 interface AdminSidebarProps {
+  /** Whether the mobile sidebar drawer is currently visible. */
   isOpen: boolean;
+  /** Closes the mobile drawer after overlay, close-button, or link interaction. */
   onClose: () => void;
 }
 
+/**
+ * Renders the admin sidebar as a client component.
+ *
+ * Highlights the active admin route, closes itself on mobile navigation, and
+ * signs the user out via Supabase before redirecting to the admin login page.
+ *
+ * @param props - Component props.
+ * @param props.isOpen - Whether the mobile sidebar drawer is visible.
+ * @param props.onClose - Callback used to close the drawer.
+ */
 function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();

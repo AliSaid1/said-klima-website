@@ -1,7 +1,19 @@
+/**
+ * Public layout footer module.
+ * Provides persistent brand, dienstleistung (service), company, and legal
+ * navigation links for the site shell.
+ */
+
 import Link from 'next/link';
 import {LOGO_SRC, COMPANY_NAME, LOGO_SRC_SILVER} from '@/lib/branding';
 import Image from 'next/image';
 
+/**
+ * Renders the public site footer as a server component.
+ *
+ * Displays the silver brand logo, grouped navigation to services, shop,
+ * company pages, and legal pages, plus a dynamic copyright year.
+ */
 export default function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-300 py-16 border-t border-slate-800">
@@ -64,4 +76,3 @@ export default function Footer() {
     </footer>
   );
 }
-

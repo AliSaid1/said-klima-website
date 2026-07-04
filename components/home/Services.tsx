@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Client component module for the homepage services teaser.
+ * Presents klima service offerings with animated imagery and expandable
+ * descriptions.
+ */
+
 import { useState } from 'react';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
@@ -26,6 +32,13 @@ const services = [
   }
 ];
 
+/**
+ * Renders the homepage services section as a client component.
+ *
+ * Maintains the active dienstleistung (service) in local state, swaps the
+ * corresponding image with motion transitions, and expands the active
+ * description while keeping the list keyboard-agnostic and click-driven.
+ */
 export default function Services() {
   const [activeService, setActiveService] = useState(services[1].id);
 
@@ -121,4 +134,3 @@ export default function Services() {
     </section>
   );
 }
-

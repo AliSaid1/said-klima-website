@@ -1,5 +1,13 @@
+/**
+ * Server-safe presentation module for mapping domain status codes to badges.
+ * Covers bestellung (order), buchung (booking), artikel (product), and CMS
+ * publication states with German labels and Tailwind color classes.
+ */
+
 interface StatusBadgeProps {
+  /** Raw status code from the domain model or API response. */
   status: string;
+  /** Optional semantic grouping retained for callers that distinguish order or booking contexts. */
   variant?: 'default' | 'order' | 'booking';
 }
 
@@ -47,6 +55,17 @@ const statusLabels: Record<string, string> = {
   draft: 'Entwurf',
 };
 
+/**
+ * Renders a pill badge for a bestellung (order), buchung (booking), artikel
+ * (product), or CMS status.
+ *
+ * Unknown status codes remain visible with neutral styling so admin users can
+ * still inspect backend values.
+ *
+ * @param props - Component props.
+ * @param props.status - Status code to label and colorize.
+ * @param props.variant - Optional caller context; currently visual mapping is status-based.
+ */
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const colorClass = statusColors[status] || 'bg-slate-100 text-slate-800';
   const label = statusLabels[status] || status;
@@ -57,4 +76,3 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     </span>
   );
 }
-

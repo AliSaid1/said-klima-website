@@ -1,19 +1,40 @@
 'use client';
 
+/**
+ * Client component module for product-detail purchase actions.
+ * Handles optional installation selection, total-price display, and cart
+ * insertion for a shop artikel (product).
+ */
+
 import { useState } from 'react';
 import { ShoppingCart, Shield, Wrench } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
 import { toast } from 'sonner';
 
 interface ProductActionsProps {
+  /** Product summary required to create a cart item. */
   product: {
+    /** Product id used as artikel_id and to derive the display article number. */
     id: string;
+    /** Product name shown in the cart toast and cart item title. */
     name: string;
+    /** Base gross product price without optional installation. */
     price: number;
+    /** Product image URL stored on the cart item. */
     image: string;
   };
 }
 
+/**
+ * Renders product purchase controls as a client component.
+ *
+ * Lets the customer choose whether installation is included, recalculates the
+ * displayed total price, adds the configured artikel (product) to the cart, and
+ * shows toast feedback after insertion.
+ *
+ * @param props - Component props.
+ * @param props.product - Product summary used for pricing and cart insertion.
+ */
 export default function ProductActions({ product }: ProductActionsProps) {
   const [mitInstallation, setMitInstallation] = useState(false);
   const { addItem } = useCart();
@@ -103,4 +124,3 @@ export default function ProductActions({ product }: ProductActionsProps) {
     </>
   );
 }
-

@@ -1,5 +1,11 @@
 'use client';
 
+/**
+ * Client component module for the homepage product teaser.
+ * Fetches artikel (products) from the shop API, derives kategorie (category)
+ * filters, supports local search, and previews selected products in a modal.
+ */
+
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,17 +13,32 @@ import { ShoppingCart, Search, X, ArrowRight, Package, Loader2 } from 'lucide-re
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Product {
+  /** Product id used for modal state and detail-page linking. */
   id: string;
+  /** German product title shown on cards and in the modal. */
   titel: string;
+  /** Optional product description rendered as teaser and detail text. */
   beschreibung: string | null;
+  /** Gross price before optional discount. */
   preis_brutto: number;
+  /** Optional discounted gross price. */
   rabattpreis: number | null;
+  /** Optional kategorie (category) used for filtering and labels. */
   kategorien: { id: string; name: string; slug: string } | null;
+  /** Optional brand metadata. */
   marken: { id: string; name: string } | null;
+  /** Ordered product image records used to choose the card and modal image. */
   artikel_bilder: Array<{ id: string; alt_text: string | null; url: string }>;
 
 }
 
+/**
+ * Renders a homepage product teaser as a client component.
+ *
+ * Loads up to eight shop products, exposes category and text filters, displays
+ * loading/error/empty states, computes discount-aware prices, and opens an
+ * animated product preview modal linking to the product detail page.
+ */
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -292,4 +313,3 @@ export default function Products() {
     </section>
   );
 }
-

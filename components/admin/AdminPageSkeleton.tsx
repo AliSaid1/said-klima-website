@@ -2,6 +2,17 @@
  * Shared loading skeleton for admin data pages.
  * Used by every admin route's loading.tsx.
  */
+/**
+ * Server component module for reusable admin loading placeholders.
+ * Provides a table-oriented skeleton while admin routes fetch protected data.
+ */
+/**
+ * Renders the standardized admin page loading state with placeholder title,
+ * action bar, table header, and configurable placeholder rows.
+ *
+ * @param props - Component props.
+ * @param props.rows - Number of table body placeholder rows to render.
+ */
 export default function AdminPageSkeleton({ rows = 5 }: { rows?: number }) {
   return (
     <div className="p-6 animate-pulse">
@@ -32,4 +43,3 @@ export default function AdminPageSkeleton({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
-

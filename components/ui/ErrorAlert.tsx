@@ -1,14 +1,25 @@
 'use client';
 
+/**
+ * Client component module for reusable alert messaging.
+ * Provides severity-based page or section feedback with optional dismissal.
+ */
+
 import { AlertTriangle, Info, CheckCircle, XCircle, X } from 'lucide-react';
 
+/** Supported visual and semantic alert severities. */
 type Severity = 'error' | 'warning' | 'info' | 'success';
 
 interface ErrorAlertProps {
+  /** Message body; when empty, the component renders nothing. */
   message: string | null | undefined;
+  /** Alert severity controlling icon and color palette. */
   severity?: Severity;
+  /** Optional bold title shown above the message body. */
   title?: string;
+  /** Optional dismiss callback that displays a close button when provided. */
   onClose?: () => void;
+  /** Additional Tailwind classes appended to the alert container. */
   className?: string;
 }
 
@@ -54,6 +65,13 @@ const CONFIG: Record<Severity, {
  *
  * @example
  * <ErrorAlert message={serverError} severity="error" onClose={() => setError(null)} />
+ *
+ * @param props - Component props.
+ * @param props.message - Message body to display.
+ * @param props.severity - Severity controlling icon and colors.
+ * @param props.title - Optional title text.
+ * @param props.onClose - Optional dismiss handler.
+ * @param props.className - Optional additional CSS classes.
  */
 export default function ErrorAlert({
   message,
@@ -88,4 +106,3 @@ export default function ErrorAlert({
     </div>
   );
 }
-

@@ -1,9 +1,18 @@
+/**
+ * Server component module for applying brand theme colors.
+ * Reads firmeneinstellungen (company settings) from Supabase and exposes the
+ * configured colors as CSS custom properties for descendant components.
+ */
+
 import { createClient } from '@/lib/supabase/server';
 
 /**
  * Server Component: Fetches brand colors from firmeneinstellungen
  * and injects CSS custom properties on <html>.
  * Wrap around {children} in root layout.
+ *
+ * @param props - Component props.
+ * @param props.children - React subtree that should receive the configured CSS variables.
  */
 export default async function ThemeProvider({ children }: { children: React.ReactNode }) {
   let colors = {
@@ -43,4 +52,3 @@ export default async function ThemeProvider({ children }: { children: React.Reac
     </div>
   );
 }
-
