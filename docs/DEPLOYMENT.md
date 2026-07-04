@@ -335,19 +335,20 @@ for the Preview `STRIPE_WEBHOOK_SECRET`.
 
 **Copying the catalog into staging:** the seeded E2E catalog has no images, so
 staging can look bare. To mirror the current production catalog (rows **and**
-`product-images` storage files) into another project, use `scripts/copy-catalog.mjs`:
+`product-images` storage files) into your staging/test project, run:
 
 ```bash
-# SOURCE defaults to .env.local (production, read-only).
-# Provide the TARGET (staging/test) project creds, then:
-TARGET_SUPABASE_URL="https://<staging-ref>.supabase.co" \
-TARGET_SERVICE_ROLE_KEY="<staging service-role key>" \
 npm run copy:catalog
-# add DRY_RUN=1 to preview counts without writing, SKIP_STORAGE=1 to skip images.
 ```
 
-The script upserts by primary key in FK-safe order and refuses to run if source
-and target are the same project.
+By default it copies **from** `.env.local` (production, read-only) **to** the
+test/staging project in `.env.e2e.local`. It first TRUNCATEs the target's
+catalog tables (so production rows land with their original IDs, keeping image
+links intact), then copies rows in FK-safe order and the storage files. Options:
+`DRY_RUN=1` (preview counts, no writes), `SKIP_STORAGE=1` (rows only),
+`SKIP_CLEAR=1` (don't truncate first). Override the target explicitly with
+`TARGET_SUPABASE_URL` / `TARGET_SERVICE_ROLE_KEY` env vars. It refuses to run if
+source and target are the same project.
 
 > ⚠️ **Ephemeral if the target is the CI test project.** That project is wiped +
 > reseeded on every CI run (`npm run seed:test`), so a copy into it lasts only

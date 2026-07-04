@@ -14,16 +14,21 @@
  * ── Credentials (env vars) ──────────────────────────────────────────────────
  *   SOURCE_SUPABASE_URL           default: NEXT_PUBLIC_SUPABASE_URL   (read-only)
  *   SOURCE_SERVICE_ROLE_KEY       default: SUPABASE_SERVICE_ROLE_KEY
- *   TARGET_SUPABASE_URL           REQUIRED — the staging/test project (written to)
- *   TARGET_SERVICE_ROLE_KEY       REQUIRED
+ *   TARGET_SUPABASE_URL           the staging/test project (written to). If unset,
+ *                                 falls back to NEXT_PUBLIC_SUPABASE_URL in .env.e2e.local
+ *   TARGET_SERVICE_ROLE_KEY       if unset, falls back to SUPABASE_SERVICE_ROLE_KEY
+ *                                 in .env.e2e.local
  * Optional:
  *   SKIP_STORAGE=1                skip copying image files (rows only)
  *   DRY_RUN=1                     read + report counts, write nothing
  *
  * ── Usage ───────────────────────────────────────────────────────────────────
- *   # SOURCE defaults to whatever .env.local points at (production).
- *   # Provide TARGET_* for the staging/test project, then:
+ *   # SOURCE defaults to .env.local (production). TARGET defaults to the
+ *   # test/staging project in .env.e2e.local. So this just works:
  *   npm run copy:catalog
+ *   # ...or override the target explicitly (PowerShell):
+ *   #   $env:TARGET_SUPABASE_URL="https://<ref>.supabase.co"
+ *   #   $env:TARGET_SERVICE_ROLE_KEY="<key>"; npm run copy:catalog
  *
  * ⚠️ NOTE: if the target is the same project CI reseeds (npm run seed:test),
  * this copy is ephemeral — the next CI run wipes it. For persistent staging
@@ -33,10 +38,34 @@
  * NODE_TLS_REJECT_UNAUTHORIZED=0 so the REST/Storage calls succeed.
  */
 
+import fs from 'node:fs';
+
 const SOURCE_URL = process.env.SOURCE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SOURCE_KEY = process.env.SOURCE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-const TARGET_URL = process.env.TARGET_SUPABASE_URL;
-const TARGET_KEY = process.env.TARGET_SERVICE_ROLE_KEY;
+
+// Target defaults: explicit TARGET_* env vars win; otherwise fall back to the
+// test/staging project defined in .env.e2e.local so `npm run copy:catalog`
+// works out of the box (source = production via .env.local, target = staging).
+const e2eEnv = readEnvFile('.env.e2e.local');
+const TARGET_URL = process.env.TARGET_SUPABASE_URL || e2eEnv.NEXT_PUBLIC_SUPABASE_URL;
+const TARGET_KEY = process.env.TARGET_SERVICE_ROLE_KEY || e2eEnv.SUPABASE_SERVICE_ROLE_KEY;
+const TARGET_ACCESS_TOKEN =
+  process.env.TARGET_ACCESS_TOKEN || e2eEnv.SUPABASE_ACCESS_TOKEN || process.env.SUPABASE_ACCESS_TOKEN;
+
+function readEnvFile(path) {
+  try {
+    const out = {};
+    for (const line of fs.readFileSync(path, 'utf8').split('\n')) {
+      const m = line.match(/^\s*([\w.]+)\s*=\s*(.*)\s*$/);
+      if (m && !line.trimStart().startsWith('#')) {
+        out[m[1]] = m[2].replace(/^["']|["']$/g, '').trim();
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 const DRY_RUN = process.env.DRY_RUN === '1';
 const SKIP_STORAGE = process.env.SKIP_STORAGE === '1';
@@ -58,8 +87,8 @@ function requireEnv() {
   if (!SOURCE_URL) missing.push('SOURCE_SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL)');
   if (!SOURCE_KEY) missing.push('SOURCE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE_KEY)');
   if (!DRY_RUN) {
-    if (!TARGET_URL) missing.push('TARGET_SUPABASE_URL');
-    if (!TARGET_KEY) missing.push('TARGET_SERVICE_ROLE_KEY');
+    if (!TARGET_URL) missing.push('TARGET_SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL in .env.e2e.local)');
+    if (!TARGET_KEY) missing.push('TARGET_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_ROLE_KEY in .env.e2e.local)');
   }
   if (missing.length) {
     console.error('ERROR: missing env vars:\n  - ' + missing.join('\n  - '));
@@ -102,7 +131,32 @@ function sortForFk(table, rows) {
   return [...rows].sort((a, b) => (a.parent_id ? 1 : 0) - (b.parent_id ? 1 : 0));
 }
 
+// Clear the target catalog so production rows copy in with their ORIGINAL ids
+// (keeps artikel_bilder → artikel FKs intact). Uses the Supabase Management API
+// with the account access token. TRUNCATE … CASCADE also clears dependent rows
+// (e.g. order lines) — acceptable for a disposable staging/test project.
+async function clearTargetCatalog() {
+  if (process.env.SKIP_CLEAR === '1') { console.log('- clear target: skipped (SKIP_CLEAR=1)'); return; }
+  if (!TARGET_ACCESS_TOKEN) {
+    throw new Error(
+      'clearing the target needs an account access token. Set SUPABASE_ACCESS_TOKEN ' +
+      'in .env.e2e.local (or TARGET_ACCESS_TOKEN), or pass SKIP_CLEAR=1 to skip.',
+    );
+  }
+  const ref = (TARGET_URL.match(/https:\/\/([^.]+)\.supabase\.co/) || [])[1];
+  if (!ref) throw new Error(`cannot parse project ref from TARGET_SUPABASE_URL: ${TARGET_URL}`);
+  const list = TABLES.map((t) => `public.${t}`).join(', ');
+  const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${TARGET_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: `TRUNCATE ${list} RESTART IDENTITY CASCADE;` }),
+  });
+  if (!res.ok) throw new Error(`clear target: HTTP ${res.status} ${await res.text()}`);
+  console.log(`- clear target: truncated ${TABLES.length} catalog tables`);
+}
+
 async function copyTables() {
+  if (!DRY_RUN) await clearTargetCatalog();
   for (const table of TABLES) {
     const rows = await selectAll(table);
     console.log(`- ${table}: ${rows.length} row(s)${DRY_RUN ? ' (dry-run, not written)' : ''}`);
