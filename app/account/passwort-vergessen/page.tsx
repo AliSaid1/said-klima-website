@@ -1,16 +1,31 @@
 'use client';
 
+/**
+ * Forgot password page — /account/passwort-vergessen.
+ * Client component because it manages email form state, requests a Supabase reset email, and displays sent-state feedback.
+ * Data source is Supabase resetPasswordForEmail with a redirect to /account/passwort-neu through the auth callback.
+ * Key interactions include email validation, reset link submission, sent confirmation, and navigation back to login.
+ */
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Renders the password reset request flow for a benutzer (user).
+ * @returns Reset request form UI or email-sent confirmation.
+ */
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
+/**
+ * Requests a Supabase password reset email for the supplied benutzer (user) address.
+ * @param e Form submit event from the forgot-password form.
+ */
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {

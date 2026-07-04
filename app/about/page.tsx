@@ -1,7 +1,18 @@
+/**
+ * Public company profile page — /about.
+ * Server component presenting static business credibility content for Kälte- und Klimatechnik services.
+ * Data sources are static copy, the shared COMPANY_NAME branding constant, local image assets, and icon components.
+ * Key interactions are informational only; visitors use surrounding layout navigation for further actions.
+ */
+
 import Image from 'next/image';
 import { COMPANY_NAME } from '@/lib/branding';
 import { Shield, Users, Award, Clock } from 'lucide-react';
 
+/**
+ * Renders the about page with company positioning, logo imagery, and value statements.
+ * @returns Static marketing content describing service quality, certifications, and regional reliability.
+ */
 export default function AboutPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24">

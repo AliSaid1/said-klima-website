@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Account login page — /account/login.
+ * Client component because it reads search parameters, manages credential form state, calls Supabase Auth, and navigates after login.
+ * Data sources are email and error query parameters plus Supabase signInWithPassword responses.
+ * Key interactions include password visibility toggle, login validation, auth error handling, and links to registration and password reset.
+ */
+
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -7,6 +14,10 @@ import { createClient } from '@/lib/supabase/client';
 import { Mail, Lock, Eye, EyeOff, Loader2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Controls the benutzer (user) login form and Supabase password authentication flow.
+ * @returns The interactive login form with optional confirmation and auth error banners.
+ */
 function LoginForm() {
   const searchParams = useSearchParams();
   const prefillEmail = searchParams.get('email') || '';
@@ -18,6 +29,10 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+/**
+ * Validates credentials and signs the benutzer (user) in with Supabase Auth.
+ * @param e Form submit event from the login form.
+ */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -148,6 +163,10 @@ function LoginForm() {
   );
 }
 
+/**
+ * Wraps the search-parameter dependent login form in Suspense.
+ * @returns The account login route with a loading fallback.
+ */
 export default function LoginPage() {
   return (
     <Suspense fallback={

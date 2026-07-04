@@ -1,5 +1,16 @@
+/**
+ * Shipping and payment legal/CMS page — /legal/versand-zahlung.
+ * Server component that loads versand-zahlung (shipping & payment) content from the rechtstexte (legal/CMS pages) table in Supabase.
+ * Data source is the rechtstexte row with slug “versand-zahlung”, including title, HTML content, update timestamp, and published flag.
+ * Key interactions are read-only; content is injected into the legal typography container by the shared legal layout.
+ */
+
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Renders the published shipping and payment text from Supabase, or an unavailable/unpublished fallback.
+ * @returns The shipping and payment rich-text content or a status message when it cannot be shown.
+ */
 export default async function VersandZahlungPage() {
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -1,5 +1,12 @@
 ﻿'use client';
 
+/**
+ * Shopping cart page — /cart.
+ * Client component because it consumes cart context, loads shipping settings, mutates quantities, and starts checkout.
+ * Data sources are CartProvider state, /api/settings/versandkosten, and /api/checkout.
+ * Key interactions include quantity updates, item removal, cart clearing, product navigation, and redirecting to the checkout URL.
+ */
+
 import { useCart } from '@/lib/cart-context';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Loader2, Tag, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,6 +19,11 @@ import { useRouter } from 'next/navigation';
 const DEFAULT_SHIPPING_COST = 5;
 const DEFAULT_FREE_THRESHOLD = 500;
 
+/**
+ * Renders the current Warenkorb (cart) with shipping totals and checkout controls.
+ * artikel (product) rows are keyed by product id and optional variant id from the cart context.
+ * @returns Empty-cart guidance or the interactive cart and order summary UI.
+ */
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, total, itemCount } = useCart();
   const [checkingOut, setCheckingOut] = useState(false);
@@ -30,6 +42,10 @@ export default function CartPage() {
       .catch(() => {/* keep defaults */});
   }, []);
 
+/**
+ * Creates a checkout session for the current cart and redirects the browser to payment.
+ * @returns Nothing when the cart is empty; otherwise performs the checkout side effect.
+ */
   const handleCheckout = async () => {
     if (items.length === 0) return;
     setCheckingOut(true);

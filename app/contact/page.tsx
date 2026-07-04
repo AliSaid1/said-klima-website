@@ -1,8 +1,21 @@
 ﻿'use client';
+
+/**
+ * Public contact and inquiry page — /contact.
+ * Client component because it reads URL search parameters, manages form state, posts to /api/contact, and displays toast feedback.
+ * Data sources are thema and produkt query parameters plus the contact API response.
+ * Key interactions include inquiry type selection, offer-specific room details, required-field validation, and resubmission after success.
+ */
+
 import { useState, useEffect, Suspense } from 'react';
 import { Mail, Send, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
+/**
+ * Controls the contact form for general inquiries and product offers.
+ * German domain fields include produkt (product), räume (rooms), fläche (area), and standort (installation location).
+ * @returns Either a sent confirmation state or the interactive inquiry form.
+ */
 function ContactForm() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -26,9 +39,18 @@ function ContactForm() {
     nachricht: '',
   });
   const isAngebot = form.interesse === 'Angebot für Produkt' || form.interesse === 'Neues Klimagerät (Kauf/Installation)';
+/**
+ * Updates one contact form field while preserving the remaining inquiry state.
+ * @param field Form state key to update.
+ * @param value New user-entered value for the field.
+ */
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+/**
+ * Validates the contact request and submits it to the contact API.
+ * @param e Form submit event from the inquiry form.
+ */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.vorname || !form.nachname || !form.email) {
@@ -169,6 +191,10 @@ function ContactForm() {
     </div>
   );
 }
+/**
+ * Wraps the query-parameter dependent contact form in Suspense for App Router search param access.
+ * @returns The centered contact page content with a loading fallback.
+ */
 export default function ContactPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24">

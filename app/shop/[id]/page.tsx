@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Public product detail page — /shop/[id].
+ * Client component because it unwraps dynamic params, fetches product details, manages gallery and variant state, and writes to cart context.
+ * Data source is /api/shop/products/[id], returning artikel (product), variants, kategorie (category), stock, images, and technical data HTML.
+ * Key interactions include gallery selection, variant selection, quantity changes, add-to-cart, and offer inquiry routing for “Ab”-price products.
+ */
+
 import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -7,6 +14,10 @@ import { ArrowLeft, Package, Loader2, ShoppingCart, Mail, Wrench } from 'lucide-
 import { useCart } from '@/lib/cart-context';
 import { toast } from 'sonner';
 
+/**
+ * Detailed product payload used by the product detail view.
+ * artikel means product; technische_daten_rte contains trusted rich text rendered as technical data HTML.
+ */
 interface ProductDetail {
   id: string;
   artikelnummer?: string | null;
@@ -31,12 +42,22 @@ interface ProductDetail {
   artikel_technische_daten: Array<{ id: string; inhalt: string | null; anzeige_reihenfolge: number }>;
 }
 
+/**
+ * Normalizes stock data returned from the lagerbestaende relation.
+ * @param l Stock relation payload for the selected product.
+ * @returns The available quantity, or 0 when no stock is present.
+ */
 function getBestand(l: ProductDetail['lagerbestaende']): number {
   if (!l) return 0;
   if (Array.isArray(l)) return l[0]?.bestand ?? 0;
   return l.bestand ?? 0;
 }
 
+/**
+ * Renders one product detail page from a dynamic route parameter.
+ * @param params Promise containing the product id or slug from the /shop/[id] segment.
+ * @returns Loading, not-found, or interactive product detail UI.
+ */
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { addItem } = useCart();
@@ -86,6 +107,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const selectedVariant = hasVariants ? product.varianten![selectedVariantIndex] : null;
 
   // Reset quantity when variant selection changes
+/**
+ * Selects a product variant and resets quantity to one to avoid stale cart amounts.
+ * @param index Index of the selected variant in the product variant array.
+ */
   const handleVariantSelect = (index: number) => {
     setSelectedVariantIndex(index);
     setMenge(1);
@@ -106,6 +131,10 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
   const images = product.artikel_bilder || [];
 
+/**
+ * Adds the selected product or variant to the cart context with the current quantity.
+ * @returns Nothing when product data is unavailable; otherwise updates cart state and shows feedback.
+ */
   const handleAddToCart = () => {
     if (!product) return;
     addItem({

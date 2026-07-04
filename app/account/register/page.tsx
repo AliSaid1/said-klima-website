@@ -1,11 +1,22 @@
 'use client';
 
+/**
+ * Account registration page — /account/register.
+ * Client component because it manages registration form state, validates passwords, calls Supabase Auth, and shows confirmation UI.
+ * Data source is Supabase signUp, including metadata for vorname, nachname, telefon, and optional firma.
+ * Key interactions include field validation, password visibility toggle, email confirmation guidance, and navigation back to login.
+ */
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Mail, Lock, Eye, EyeOff, Loader2, User, Phone, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Renders the benutzer (user) registration form and confirmation state.
+ * @returns Registration form UI or email-confirmation success instructions.
+ */
 export default function RegisterPage() {
   const [form, setForm] = useState({
     vorname: '',
@@ -20,10 +31,19 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+/**
+ * Updates one registration form field while preserving the rest of the benutzer (user) profile draft.
+ * @param field Form state key to update.
+ * @param value New user-entered value for the field.
+ */
   const updateField = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+/**
+ * Validates registration data and creates a Supabase Auth user with profile metadata.
+ * @param e Form submit event from the registration form.
+ */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 

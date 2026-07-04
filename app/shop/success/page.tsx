@@ -1,5 +1,12 @@
 'use client';
 
+/**
+ * Checkout success page — /shop/success.
+ * Client component because it reads the Stripe session id from search params, clears cart state, verifies the order, and can download a PDF.
+ * Data source is /api/checkout/verify, with optional PDF download from /api/orders/[id]/pdf.
+ * Key interactions include displaying bestellung (order) status, payment-pending guidance, PDF download, shop navigation, and account navigation.
+ */
+
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -7,6 +14,10 @@ import { CheckCircle, Package, ArrowRight, Loader2, Mail, Truck, Download, Clock
 import { Suspense } from 'react';
 import { useCart } from '@/lib/cart-context';
 
+/**
+ * Order verification payload displayed after checkout.
+ * bestellung means order; items are the purchased artikel (product) lines returned by the verification API.
+ */
 interface OrderInfo {
   bestellnummer: string | null;
   bestellung_id?: string;
@@ -26,6 +37,10 @@ interface OrderInfo {
   }[];
 }
 
+/**
+ * Loads and renders verified checkout details for a completed or pending order.
+ * @returns Success, payment-pending, loading, or order lookup failure UI.
+ */
 function ShopSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -235,6 +250,10 @@ function ShopSuccessContent() {
   );
 }
 
+/**
+ * Wraps checkout success content in Suspense for search parameter access.
+ * @returns The checkout success route with a loading fallback.
+ */
 export default function ShopSuccessPage() {
   return (
     <Suspense fallback={<div className="min-h-[70vh] flex items-center justify-center">Laden...</div>}>

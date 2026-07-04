@@ -1,10 +1,21 @@
 'use client';
 
+/**
+ * Public shop listing page — /shop.
+ * Client component because it fetches product data, manages filter state, and derives visible product cards in the browser.
+ * Data source is /api/shop/products, which returns artikel (product), kategorie (category), brand, stock, variant, and image data.
+ * Key interactions include text search, category and brand filters, price range filtering, filter reset, and navigation to product detail pages.
+ */
+
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter, Package, Loader2 } from 'lucide-react';
 
+/**
+ * Product projection consumed by the shop listing.
+ * artikel means product, kategorien means categories, and lagerbestaende represents stock records returned by the API.
+ */
 interface ShopProduct {
   id: string;
   artikelnummer: string;
@@ -29,12 +40,21 @@ interface ShopProduct {
   }>;
 }
 
+/**
+ * Normalizes Supabase stock joins that may arrive as a single object, an array, or null.
+ * @param l Stock relation payload for an artikel (product).
+ * @returns The available stock quantity, or 0 when no stock record is present.
+ */
 function getBestand(l: ShopProduct['lagerbestaende']): number {
   if (!l) return 0;
   if (Array.isArray(l)) return l[0]?.bestand ?? 0;
   return l.bestand ?? 0;
 }
 
+/**
+ * Renders the filterable product catalog for climate equipment.
+ * @returns A shop grid with loading, empty, and filtered product states.
+ */
 export default function ShopPage() {
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,6 +101,11 @@ export default function ShopPage() {
     });
   }, [products, searchQuery, selectedKategorie, selectedMarke, priceRange]);
 
+/**
+ * Computes the lowest displayed gross price for a product card.
+ * @param product The artikel (product) including optional discount and variant surcharges.
+ * @returns The price shown in the listing card.
+ */
   const getDisplayPrice = (product: ShopProduct) => {
     const base = product.rabattpreis && Number(product.rabattpreis) < Number(product.preis_brutto)
       ? Number(product.rabattpreis)

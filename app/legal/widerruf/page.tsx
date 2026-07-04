@@ -1,5 +1,16 @@
+/**
+ * Right-of-withdrawal legal/CMS page — /legal/widerruf.
+ * Server component that loads widerruf (right of withdrawal) content from the rechtstexte (legal/CMS pages) table in Supabase.
+ * Data source is the rechtstexte row with slug “widerruf”, including title, HTML content, update timestamp, and published flag.
+ * Key interactions are read-only; content is injected into the legal typography container by the shared legal layout.
+ */
+
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Renders the published right-of-withdrawal text from Supabase, or an unavailable/unpublished fallback.
+ * @returns The right-of-withdrawal rich-text content or a status message when it cannot be shown.
+ */
 export default async function WiderrufPage() {
   const supabase = await createClient();
   const { data, error } = await supabase

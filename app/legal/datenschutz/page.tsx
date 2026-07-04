@@ -1,5 +1,16 @@
+/**
+ * Privacy legal/CMS page — /legal/datenschutz.
+ * Server component that loads datenschutz (privacy) content from the rechtstexte (legal/CMS pages) table in Supabase.
+ * Data source is the rechtstexte row with slug “datenschutz”, including title, HTML content, update timestamp, and published flag.
+ * Key interactions are read-only; content is injected into the legal typography container by the shared legal layout.
+ */
+
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Renders the published privacy policy from Supabase, or an unavailable/unpublished fallback.
+ * @returns The privacy rich-text content or a status message when it cannot be shown.
+ */
 export default async function DatenschutzPage() {
   const supabase = await createClient();
   const { data, error } = await supabase

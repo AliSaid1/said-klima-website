@@ -1,5 +1,16 @@
+/**
+ * AGB legal/CMS page — /legal/agb.
+ * Server component that loads agb (terms) from the rechtstexte (legal/CMS pages) table in Supabase.
+ * agb means Allgemeine Geschäftsbedingungen, the terms and conditions text shown to customers.
+ * Key interactions are read-only; content is injected into the legal typography container by the shared legal layout.
+ */
+
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Renders the published AGB legal text from Supabase, or an unavailable/unpublished fallback.
+ * @returns The AGB rich-text content or a status message when it cannot be shown.
+ */
 export default async function AGBPage() {
   // Server-side fetch from Supabase to get the published AGB content
   const supabase = await createClient();

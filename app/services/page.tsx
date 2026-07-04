@@ -1,6 +1,17 @@
+/**
+ * Public service overview page — /services.
+ * Server component describing dienstleistung (service) offerings for installation, Wartung (maintenance), and repair.
+ * Data sources are static service copy and icon components; no API or Supabase queries are made.
+ * Key interactions are links into /contact with preselected thema query parameters for inquiry routing.
+ */
+
 import Link from 'next/link';
 import { Wrench, Settings, PenTool, ArrowRight } from 'lucide-react';
 
+/**
+ * Renders the service cards and consultation call-to-action for regional climate technology work.
+ * @returns A static service listing with deep links to the contact form.
+ */
 export default function ServicesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24">

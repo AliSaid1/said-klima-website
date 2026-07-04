@@ -1,11 +1,22 @@
 'use client';
 
+/**
+ * New password page — /account/passwort-neu.
+ * Client component because it manages password form state, updates Supabase Auth, shows toast feedback, and redirects after success.
+ * Data source is the active Supabase password recovery session established by the auth callback.
+ * Key interactions include password validation, visibility toggle, update submission, success confirmation, and account redirect.
+ */
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Renders the password reset completion form for a benutzer (user).
+ * @returns Password update form UI or success confirmation while redirecting.
+ */
 export default function NewPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -14,6 +25,10 @@ export default function NewPasswordPage() {
   const [done, setDone] = useState(false);
   const router = useRouter();
 
+/**
+ * Validates and stores a new password for the active Supabase recovery session.
+ * @param e Form submit event from the new-password form.
+ */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
