@@ -81,11 +81,13 @@ builds an admin client up front).
 
 **`tests/checkout-pricing.spec.ts` — server-side pricing integrity** *(Stripe secrets + service role)*
 The highest-value money guarantee: the checkout must price every line from the
-database and ignore any client-supplied price.
-- ✅ A cart sent with a hostile `preis: 1` field still produces an order whose
-  `zwischensumme_brutto`, `steuer_summe` and `gesamt_brutto` are computed from the
-  seeded article's real `preis_brutto` (asserted directly in the `bestellungen`
-  row via the service-role client, then cleaned up).
+database and ignore anything the client sends. Each case places an order and
+asserts the persisted `bestellungen` totals, then cleans up.
+- ✅ A cart sent with a hostile `preis: 1` field still totals from the seeded
+  article's real `preis_brutto` (899 × 2).
+- ✅ A `rabattpreis` discount is applied (1000 → 750).
+- ✅ A known variant adds its `preis_aufschlag` surcharge (1000 + 200 = 1200).
+- ✅ An unknown `variant_id` is ignored — the base price (1000) is charged.
 
 **`tests/checkout-ui.spec.ts` — checkout → Stripe** *(`STRIPE_SECRET_KEY`)*
 - ✅ Adds a product, clicks **"Zur Kasse"**, and asserts `POST /api/checkout`
@@ -221,7 +223,7 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-53 passed, 1 skipped
+56 passed, 1 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
@@ -232,7 +234,7 @@ the customer `kunde` user is auto-seeded):
   - passed:  3 cart-operations (remove, quantity, persistence)
   - passed:  7 account-addresses (customer address CRUD)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
-  - passed:  1 checkout-pricing (DB pricing ignores client price)
+  - passed:  4 checkout-pricing (client price ignored, discount, variant, unknown variant)
   - passed:  4 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
   - passed:  5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
@@ -297,6 +299,10 @@ and are deterministic against the seeded test project.
 **✅ Done (implemented this round):**
 - ✅ **Pricing integrity at checkout** — a hostile client price is ignored; order
   totals are computed from the DB `preis_brutto` (`checkout-pricing.spec.ts`).
+- ✅ **Discount price (`rabattpreis`)** — a seeded discounted article is charged at
+  its discount price (`checkout-pricing.spec.ts`).
+- ✅ **Variant surcharge (`preis_aufschlag`)** — a variant adds its surcharge, and
+  an unknown `variant_id` falls back to the base price (`checkout-pricing.spec.ts`).
 - ✅ **Public catalog API** — product listing, `search`/`maxPreis` filters, and
   `/api/products/[id]` (400/404/200) (`catalog.spec.ts`).
 - ✅ **Booking API** — validation + a full create→lookup→cleanup round-trip
@@ -313,11 +319,6 @@ and are deterministic against the seeded test project.
   (`security.spec.ts`).
 
 **Medium value (next candidates):**
-- **Variant surcharge** — seed an article with a `varianten` entry; assert a
-  variant adds its `preis_aufschlag` to the order total, and that an unknown
-  `variant_id` is ignored. Needs `STRIPE_SECRET_KEY` + a seeded variant.
-- **Discount price (`rabattpreis`)** — seed an article with a real discount and
-  assert the order uses the discounted price. Needs a seeded discounted product.
 - **Booking UI flow** — drive the multi-step `/booking` form end-to-end and
   assert the appointment appears in `/admin/bookings` (the API path is now
   covered by `bookings-api.spec.ts`).
