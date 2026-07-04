@@ -62,6 +62,21 @@ export function checkoutEvent(
   });
 }
 
+/** Builds a minimal Stripe webhook Event envelope wrapping a PaymentIntent. */
+export function paymentIntentEvent(
+  type: string,
+  paymentIntent: Record<string, unknown>,
+): string {
+  return JSON.stringify({
+    id: `evt_test_${Date.now()}`,
+    object: 'event',
+    api_version: '2026-02-25.clover',
+    created: Math.floor(Date.now() / 1000),
+    type,
+    data: { object: { object: 'payment_intent', ...paymentIntent } },
+  });
+}
+
 /**
  * Inserts a minimal order (bestellungen) row so a webhook handler has an order
  * to transition. Returns the order id + bestellnummer. Caller should clean up.
@@ -69,7 +84,7 @@ export function checkoutEvent(
 export async function seedOrder(
   db: SupabaseClient,
 ): Promise<{ id: string; bestellnummer: string }> {
-  const bestellnummer = `E2E-${Date.now()}`;
+  const bestellnummer = `E2E-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const { data, error } = await db
     .from('bestellungen')
     .insert({
@@ -91,4 +106,46 @@ export async function seedOrder(
 
 export async function deleteOrder(db: SupabaseClient, id: string): Promise<void> {
   await db.from('bestellungen').delete().eq('id', id);
+}
+
+/**
+ * Inserts a minimal payment (zahlungen) row for an order so a webhook handler
+ * has a payment to attach a zahlungsvorgaenge (payment event) to. Returns the
+ * payment id. Caller should clean up with deletePayments before deleteOrder.
+ */
+export async function seedPayment(
+  db: SupabaseClient,
+  bestellungId: string,
+): Promise<{ id: string }> {
+  const { data, error } = await db
+    .from('zahlungen')
+    .insert({
+      bestellung_id: bestellungId,
+      anbieter: 'stripe',
+      status: 'erfasst',
+      betrag_brutto: 119.0,
+      waehrung: 'EUR',
+      stripe_payment_intent_id: `pi_test_${Date.now()}`,
+    })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(`seedPayment failed: ${error.message}`);
+  return data as { id: string };
+}
+
+/**
+ * Deletes an order's payment events (zahlungsvorgaenge) and payments (zahlungen),
+ * respecting FK order (events reference payments). Safe to call before deleteOrder.
+ */
+export async function deletePayments(db: SupabaseClient, bestellungId: string): Promise<void> {
+  const { data: zahlungen } = await db
+    .from('zahlungen')
+    .select('id')
+    .eq('bestellung_id', bestellungId);
+  const ids = (zahlungen ?? []).map((z: { id: string }) => z.id);
+  if (ids.length) {
+    await db.from('zahlungsvorgaenge').delete().in('zahlung_id', ids);
+  }
+  await db.from('zahlungen').delete().eq('bestellung_id', bestellungId);
 }

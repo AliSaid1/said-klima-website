@@ -82,12 +82,12 @@ export default function ServicesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-outfit font-bold text-slate-900">Dienstleistungen</h1>
           <p className="text-slate-500 mt-1">{services.length} Dienstleistungen</p>
         </div>
-        <button onClick={() => setShowNew(!showNew)} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors">
+        <button onClick={() => setShowNew(!showNew)} className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0 whitespace-nowrap">
           <Plus className="w-4 h-4" /> Neue Dienstleistung
         </button>
       </div>
@@ -131,7 +131,7 @@ export default function ServicesPage() {
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-6 py-4 text-sm font-mono text-slate-600">{s.code}</td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{s.name}</td>
-                    <td className="px-6 py-4 text-sm text-slate-900">{Number(s.basispreis_brutto).toFixed(2)} €</td>
+                    <td className="px-6 py-4 text-sm text-slate-900 whitespace-nowrap">{Number(s.basispreis_brutto).toFixed(2)} €</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{s.dauer_minuten} Min.</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${s.aktiv ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'}`}>

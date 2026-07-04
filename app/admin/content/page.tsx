@@ -62,20 +62,20 @@ export default function ContentListPage() {
               <Link
                 key={page.id}
                 href={`/admin/content/${page.slug}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
+                className="flex items-center justify-between gap-3 px-6 py-4 hover:bg-slate-50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
                     <FileText className="w-5 h-5" />
                   </div>
-                  <div>
-                    <p className="font-medium text-slate-900 text-sm">{page.titel}</p>
-                    <p className="text-xs text-slate-500 font-mono">/{page.slug}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 text-sm truncate">{page.titel}</p>
+                    <p className="text-xs text-slate-500 font-mono truncate">/{page.slug}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 flex-shrink-0">
                   <StatusBadge status={page.veröffentlicht ? 'published' : 'draft'} />
-                  <span className="text-xs text-slate-400">
+                  <span className="text-xs text-slate-400 hidden sm:inline">
                     {new Date(page.aktualisiert_am).toLocaleDateString('de-DE')}
                   </span>
                 </div>

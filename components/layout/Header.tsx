@@ -133,7 +133,7 @@ export default function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-b border-slate-200 overflow-hidden"
+            className="md:hidden bg-white border-b border-slate-200 shadow-xl overflow-hidden"
           >
             <div className="px-4 pt-2 pb-6 space-y-4">
               <Link href="/services" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2 text-base font-medium text-slate-900 hover:bg-slate-50 rounded-lg">

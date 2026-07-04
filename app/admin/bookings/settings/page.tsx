@@ -170,7 +170,7 @@ export default function BookingSettingsPage() {
 
         <div className="space-y-3">
           {availability.map((day, i) => (
-            <div key={i} className="flex items-center gap-4 py-2">
+            <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2">
               <label className="flex items-center gap-2 w-36 flex-shrink-0">
                 <input
                   type="checkbox"

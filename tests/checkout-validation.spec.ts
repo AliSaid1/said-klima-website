@@ -60,6 +60,22 @@ test.describe('Checkout validation', () => {
     expect((await res.json()).error).toMatch(/Mengenangaben/i);
   });
 
+  test('rejects a quantity above the per-line cap of 999 (400)', async ({ request }) => {
+    const res = await postCheckout(request, {
+      items: [{ artikel_id: NONEXISTENT_UUID, menge: 1000 }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error).toMatch(/Mengenangaben/i);
+  });
+
+  test('rejects a non-integer quantity (400)', async ({ request }) => {
+    const res = await postCheckout(request, {
+      items: [{ artikel_id: NONEXISTENT_UUID, menge: 1.5 }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error).toMatch(/Mengenangaben/i);
+  });
+
   test('rejects a valid-looking UUID that is not a real article (400)', async ({
     request,
   }) => {

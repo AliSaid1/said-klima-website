@@ -6,8 +6,11 @@ import {
   adminClient,
   signWebhook,
   checkoutEvent,
+  paymentIntentEvent,
   seedOrder,
+  seedPayment,
   deleteOrder,
+  deletePayments,
 } from './helpers/stripe';
 
 /**
@@ -91,6 +94,228 @@ test.describe('Stripe webhook', () => {
       expect(res.ok()).toBeTruthy();
 
       // The handler updates the order status via the service-role client.
+      await expect
+        .poll(async () => {
+          const { data } = await db
+            .from('bestellungen')
+            .select('status')
+            .eq('id', order.id)
+            .single();
+          return data?.status;
+        }, { timeout: 15000 })
+        .toBe('fehlgeschlagen');
+    } finally {
+      await deleteOrder(db, order.id);
+    }
+  });
+
+  /**
+   * A card decline fires payment_intent.payment_failed while the Checkout
+   * session is still active. We record the failed attempt in zahlungsvorgaenge
+   * (payment events) so staff can see why a payment didn't go through.
+   */
+  test('payment_intent.payment_failed records a failure event on the order', async ({ request }) => {
+    test.skip(
+      !stripeConfigured() || !serviceConfigured(),
+      'Stripe secrets / Supabase service role not set',
+    );
+
+    const db = adminClient();
+    const order = await seedOrder(db);
+    const payment = await seedPayment(db, order.id);
+
+    try {
+      const payload = paymentIntentEvent('payment_intent.payment_failed', {
+        id: `pi_test_${Date.now()}`,
+        amount: 11900,
+        currency: 'eur',
+        metadata: { bestellung_id: order.id, bestellnummer: order.bestellnummer },
+        last_payment_error: {
+          code: 'card_declined',
+          message: 'Your card was declined.',
+          payment_method: { type: 'card' },
+        },
+      });
+
+      const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': signWebhook(payload),
+        },
+        data: payload,
+      });
+      expect(res.ok()).toBeTruthy();
+
+      await expect
+        .poll(async () => {
+          const { data } = await db
+            .from('zahlungsvorgaenge')
+            .select('ereignis')
+            .eq('zahlung_id', payment.id)
+            .eq('ereignis', 'payment_intent.payment_failed');
+          return data?.length ?? 0;
+        }, { timeout: 15000 })
+        .toBeGreaterThan(0);
+    } finally {
+      await deletePayments(db, order.id);
+      await deleteOrder(db, order.id);
+    }
+  });
+
+  /** A payment_intent.payment_failed with no order metadata must still 200 (no crash). */
+  test('payment_intent.payment_failed without a bestellung_id is acknowledged (200)', async ({ request }) => {
+    test.skip(!stripeConfigured(), 'STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not set');
+
+    const payload = paymentIntentEvent('payment_intent.payment_failed', {
+      id: `pi_test_${Date.now()}`,
+      amount: 5000,
+      currency: 'eur',
+      last_payment_error: { code: 'card_declined', message: 'declined' },
+    });
+    const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': signWebhook(payload),
+      },
+      data: payload,
+    });
+    expect(res.ok()).toBeTruthy();
+    expect((await res.json()).received).toBe(true);
+  });
+
+  /** An expired Checkout session cancels a still-open order (offen → storniert). */
+  test('checkout.session.expired cancels a still-open order (storniert)', async ({ request }) => {
+    test.skip(
+      !stripeConfigured() || !serviceConfigured(),
+      'Stripe secrets / Supabase service role not set',
+    );
+
+    const db = adminClient();
+    const order = await seedOrder(db); // seeded as 'offen'
+
+    try {
+      const payload = checkoutEvent('checkout.session.expired', {
+        id: `cs_test_${Date.now()}`,
+        metadata: { bestellung_id: order.id, bestellnummer: order.bestellnummer },
+      });
+
+      const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': signWebhook(payload),
+        },
+        data: payload,
+      });
+      expect(res.ok()).toBeTruthy();
+
+      await expect
+        .poll(async () => {
+          const { data } = await db
+            .from('bestellungen')
+            .select('status')
+            .eq('id', order.id)
+            .single();
+          return data?.status;
+        }, { timeout: 15000 })
+        .toBe('storniert');
+    } finally {
+      await deleteOrder(db, order.id);
+    }
+  });
+
+  /** An expired session must NOT overwrite an already-paid order. */
+  test('checkout.session.expired leaves an already-paid order unchanged', async ({ request }) => {
+    test.skip(
+      !stripeConfigured() || !serviceConfigured(),
+      'Stripe secrets / Supabase service role not set',
+    );
+
+    const db = adminClient();
+    const order = await seedOrder(db);
+    await db.from('bestellungen').update({ status: 'bezahlt' }).eq('id', order.id);
+
+    try {
+      const payload = checkoutEvent('checkout.session.expired', {
+        id: `cs_test_${Date.now()}`,
+        metadata: { bestellung_id: order.id, bestellnummer: order.bestellnummer },
+      });
+
+      const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': signWebhook(payload),
+        },
+        data: payload,
+      });
+      expect(res.ok()).toBeTruthy();
+
+      // Give the handler time to (not) act, then confirm the status is unchanged.
+      await new Promise((r) => setTimeout(r, 2500));
+      const { data } = await db
+        .from('bestellungen')
+        .select('status')
+        .eq('id', order.id)
+        .single();
+      expect(data?.status).toBe('bezahlt');
+    } finally {
+      await deleteOrder(db, order.id);
+    }
+  });
+
+  /** async_payment_failed with no order metadata must still 200 (no crash). */
+  test('async_payment_failed without a bestellung_id is acknowledged (200)', async ({ request }) => {
+    test.skip(!stripeConfigured(), 'STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not set');
+
+    const payload = checkoutEvent('checkout.session.async_payment_failed', {
+      id: `cs_test_${Date.now()}`,
+    });
+    const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': signWebhook(payload),
+      },
+      data: payload,
+    });
+    expect(res.ok()).toBeTruthy();
+    expect((await res.json()).received).toBe(true);
+  });
+
+  /**
+   * Stripe re-delivers events on any non-2xx / timeout, so a repeated
+   * async_payment_failed must be idempotent — the order stays 'fehlgeschlagen'
+   * and both deliveries are acknowledged.
+   */
+  test('duplicate async_payment_failed delivery is idempotent', async ({ request }) => {
+    test.skip(
+      !stripeConfigured() || !serviceConfigured(),
+      'Stripe secrets / Supabase service role not set',
+    );
+
+    const db = adminClient();
+    const order = await seedOrder(db);
+
+    try {
+      const send = async () => {
+        const payload = checkoutEvent('checkout.session.async_payment_failed', {
+          id: `cs_test_${Date.now()}`,
+          metadata: { bestellung_id: order.id, bestellnummer: order.bestellnummer },
+          amount_total: 11900,
+          currency: 'eur',
+        });
+        return request.post(`${BASE_URL}/api/webhooks/stripe`, {
+          headers: {
+            'content-type': 'application/json',
+            'stripe-signature': signWebhook(payload),
+          },
+          data: payload,
+        });
+      };
+
+      const r1 = await send();
+      const r2 = await send();
+      expect(r1.ok()).toBeTruthy();
+      expect(r2.ok()).toBeTruthy();
+
       await expect
         .poll(async () => {
           const { data } = await db

@@ -220,9 +220,11 @@ export default function ShopPage() {
 
         {/* Product Grid */}
         <div className="flex-grow">
-          <div className="mb-6 flex justify-between items-center">
-            <p className="text-slate-600">{filteredProducts.length} Produkte gefunden</p>
-          </div>
+          {!loading && (
+            <div className="mb-6 flex justify-between items-center">
+              <p className="text-slate-600">{filteredProducts.length} Produkte gefunden</p>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-20">

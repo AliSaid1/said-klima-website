@@ -63,9 +63,27 @@ the seeded test project); ⏭️ marks an opt-in test that is intentionally skip
   `checkout.session.async_payment_failed` event transitions the seeded order to
   `fehlgeschlagen` (asserted in the DB). Uses `helpers/stripe.ts` to sign events
   and seed/clean up the order via the service-role client.
-- The Stripe *success* paths (`checkout.session.completed` /
-  `async_payment_succeeded`) call the real Stripe API (`sessions.retrieve`), so
-  they're covered by the UI-up-to-Stripe test rather than synthetic events.
+- ✅ *(Stripe secrets + service role)* a `payment_intent.payment_failed` (card
+  decline while the session is still active) records a
+  `payment_intent.payment_failed` row in `zahlungsvorgaenge` for the order's payment.
+- ✅ *(Stripe secrets)* a `payment_intent.payment_failed` with no `bestellung_id`
+  metadata is still acknowledged `200` (no crash).
+- ✅ *(Stripe secrets + service role)* a `checkout.session.expired` transitions a
+  still-`offen` order to `storniert`.
+- ✅ *(Stripe secrets + service role)* a `checkout.session.expired` leaves an
+  already-`bezahlt` order **unchanged** (never clobbers a paid order).
+- ✅ *(Stripe secrets)* an `async_payment_failed` with no `bestellung_id` is
+  acknowledged `200` (no crash).
+- ✅ *(Stripe secrets + service role)* a **duplicate** `async_payment_failed`
+  delivery is idempotent — the order stays `fehlgeschlagen` (Stripe retries on any
+  non-2xx / timeout, so handlers must tolerate re-delivery).
+- ⚠️ **Not covered by an end-state assertion:** the Stripe *success* paths
+  (`checkout.session.completed` / `async_payment_succeeded`) call the real Stripe
+  API (`sessions.retrieve`), so a synthetic event with a fake `cs_…` id can't
+  drive them. They're covered *up to Stripe* by `checkout-ui.spec.ts`; asserting
+  the order flips to `bezahlt` needs the hosted Checkout + `stripe listen` webhook
+  forwarding (see §6 item 1). This is the **one** payment path without an
+  automated paid-state assertion.
 
 **`tests/checkout-validation.spec.ts` — checkout input validation** *(service role)*
 Guards the payment entry point. Every case is rejected with a `4xx` **before**
@@ -76,6 +94,8 @@ builds an admin client up front).
 - ✅ a non-UUID `artikel_id` → `400` (the class of bug the v4 UUID seed fix
   addressed — see §5 gotcha)
 - ✅ an invalid quantity (`menge: 0`) → `400`
+- ✅ a quantity above the per-line cap (`menge: 1000`) → `400`
+- ✅ a non-integer quantity (`menge: 1.5`) → `400`
 - ✅ a syntactically-valid v4 UUID that isn't a real article → `400 nicht gefunden`
   (arbitrary IDs must never create a session)
 
@@ -223,7 +243,7 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-56 passed, 1 skipped
+64 passed, 1 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
@@ -235,8 +255,11 @@ the customer `kunde` user is auto-seeded):
   - passed:  7 account-addresses (customer address CRUD)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
   - passed:  4 checkout-pricing (client price ignored, discount, variant, unknown variant)
-  - passed:  4 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
-  - passed:  5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
+  - passed: 10 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed,
+             pi_failed+event, pi_failed no-meta, expired→storniert, expired no-op on paid,
+             async_failed no-meta, async_failed idempotent)
+  - passed:  7 checkout-validation (empty cart, >50 items, bad UUID, bad qty,
+             qty>999, non-integer qty, unknown article)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
 ```
 
@@ -339,3 +362,56 @@ and are deterministic against the seeded test project.
 
 - [CI_SETUP.md](./CI_SETUP.md) — GitHub Actions workflow + test-DB seeding.
 - [`playwright.config.ts`](../../playwright.config.ts) — runner configuration.
+
+---
+
+## 8. Test tracking process & change log
+
+We track every test suite in one place so it's obvious what exists, what's
+covered, and what's intentionally *not* covered. Keep this section honest — a
+known gap that's written down is worth more than a false "100%".
+
+### 8.1 The process (follow this whenever you touch tests)
+
+1. **Before writing a test**, find the system-under-test (route/component) and
+   list its branches (happy path + each error/edge case). Note any branch that
+   can't be tested synthetically and *why* (see the ⚠️ note under Stripe webhook).
+2. **Add / change the test** in the relevant `tests/*.spec.ts`. Reuse the shared
+   helpers in `tests/helpers/` (`auth.ts`, `stripe.ts`, `db.ts`) — don't re-seed
+   ad-hoc. Always clean up seeded rows in a `try/finally`.
+3. **Gate** any test that needs secrets with `test.skip(!stripeConfigured() …)` /
+   service-role guards so the suite stays green without secrets locally.
+4. **Run it** (see §3) and confirm green. On TLS-intercepting machines,
+   DB-seeding tests need `NODE_TLS_REJECT_UNAUTHORIZED=0` for the test process.
+5. **Update the docs in the same change:** add/adjust the bullet in §2, bump the
+   counts in §4 ("Latest result"), and **add a row to the change log below.**
+6. **Commit** test + doc together so history and coverage never drift apart.
+
+Status legend: ✅ automated & asserting an end state · ⚠️ partial / up-to-external
+-service only · ⛔ intentionally not covered (documented reason).
+
+### 8.2 Change log
+
+| Date       | Area                | Change                                                                                                   | Spec file                        | Status |
+| ---------- | ------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------- | ------ |
+| 2025-02   | Stripe webhook      | `payment_intent.payment_failed` records a `zahlungsvorgaenge` failure row for the order's payment        | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Stripe webhook      | `payment_intent.payment_failed` with no `bestellung_id` metadata → still `200` (no crash)                | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Stripe webhook      | `checkout.session.expired` transitions an `offen` order → `storniert`                                    | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Stripe webhook      | `checkout.session.expired` leaves an already-`bezahlt` order unchanged                                   | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Stripe webhook      | `async_payment_failed` with no `bestellung_id` → `200` (no crash)                                        | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Stripe webhook      | Duplicate `async_payment_failed` delivery is idempotent (order stays `fehlgeschlagen`)                   | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2025-02   | Checkout validation | Quantity above per-line cap (`menge: 1000`) → `400`                                                      | `tests/checkout-validation.spec.ts` | ✅  |
+| 2025-02   | Checkout validation | Non-integer quantity (`menge: 1.5`) → `400`                                                              | `tests/checkout-validation.spec.ts` | ✅  |
+| 2025-02   | Test helpers        | Added `paymentIntentEvent`, `seedPayment`, `deletePayments`; unique `bestellnummer` suffix (parallel-safe) | `tests/helpers/stripe.ts`        | ✅     |
+
+### 8.3 Known coverage gaps (accepted)
+
+- ⚠️ **Stripe success path** (`checkout.session.completed` /
+  `async_payment_succeeded` → order `bezahlt`): the handler calls the real
+  `stripe.checkout.sessions.retrieve`, so synthetic events can't drive it.
+  Covered up-to-Stripe by `checkout-ui.spec.ts`; a true paid-state assertion
+  needs `stripe listen` webhook forwarding (not in standard CI). **This is the
+  only payment branch without an automated end-state assertion.**
+- ⛔ **Rate limiting (429)** — better as a targeted unit test (see §6).
+- ⛔ **Stock/`lagerbestand` check at checkout** — not enforced at checkout by
+  design, so there's nothing to assert.
