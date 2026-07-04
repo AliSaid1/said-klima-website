@@ -9,6 +9,10 @@ const fixturePath = path.resolve(__dirname, 'fixtures', 'sample.png');
 // so it is opt-in: set RUN_UPLOAD_E2E=1 (plus TEST_EMAIL/TEST_PASSWORD) to run it.
 
 test.describe('Editor image upload (UI)', () => {
+  /**
+   * Logs in, opens the rich-text editor, uploads an image via the dynamic file
+   * input, and verifies the returned public URL is reachable. Opt-in only.
+   */
   test('login, open editor, upload image, verify public URL', async ({ page }) => {
     const email = process.env.TEST_EMAIL;
     const password = process.env.TEST_PASSWORD;

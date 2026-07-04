@@ -23,6 +23,12 @@ const CART_ITEM = {
   dienstleistung_id: null,
 };
 
+/**
+ * Seeds a single cart item into localStorage and reloads so the /cart page
+ * renders it.
+ *
+ * @param page - A page already able to reach /cart.
+ */
 async function seedCart(page: Page) {
   await page.goto(`${BASE_URL}/cart`);
   await page.evaluate(
@@ -33,6 +39,12 @@ async function seedCart(page: Page) {
   await expect(page.getByText(CART_ITEM.titel).first()).toBeVisible({ timeout: 15000 });
 }
 
+/**
+ * Reads the persisted quantity of the first cart item from localStorage.
+ *
+ * @param page - The cart page.
+ * @returns The stored `menge`, or undefined if the cart is empty.
+ */
 const cartMenge = (page: Page) =>
   page.evaluate((key) => {
     const raw = localStorage.getItem(key);
@@ -40,6 +52,7 @@ const cartMenge = (page: Page) =>
   }, CART_KEY);
 
 test.describe('Cart operations', () => {
+  /** Removing the last item transitions the cart to its empty state. */
   test('removing the only item empties the cart', async ({ page }) => {
     await seedCart(page);
     await page.getByRole('button', { name: 'Artikel entfernen' }).first().click();
@@ -48,6 +61,7 @@ test.describe('Cart operations', () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
+  /** The "+" control increments and persists the item quantity. */
   test('increasing the quantity updates the persisted cart', async ({ page }) => {
     await seedCart(page);
     expect(await cartMenge(page)).toBe(2);
@@ -55,6 +69,7 @@ test.describe('Cart operations', () => {
     await expect.poll(() => cartMenge(page), { timeout: 10000 }).toBe(3);
   });
 
+  /** The cart rehydrates from localStorage after a full page reload. */
   test('the cart survives a page reload', async ({ page }) => {
     await seedCart(page);
     // seedCart already reloaded once after seeding; reload again without

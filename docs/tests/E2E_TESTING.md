@@ -33,8 +33,12 @@ the seeded test project); ⏭️ marks an opt-in test that is intentionally skip
 | 🔴 Critical | `security.spec.ts` | Anyone could reach protected data / bypass admin auth |
 | 🔴 Critical | `stripe-webhook.spec.ts` | Payments mis-recorded; orders never confirmed/failed |
 | 🔴 Critical | `checkout-validation.spec.ts` | Bad/forged carts reach payment |
+| 🔴 Critical | `checkout-pricing.spec.ts` | Customers charged the wrong amount (price tampering) |
 | 🔴 Critical | `checkout-ui.spec.ts` | Customers can't pay at all |
 | 🟠 High | `admin-dashboard.spec.ts` | Staff locked out of / into the back office |
+| 🟠 High | `catalog.spec.ts` | Storefront can't list / load products |
+| 🟠 High | `bookings-api.spec.ts` | Customers can't book a service appointment |
+| 🟠 High | `contact.spec.ts` | Lead / enquiry form rejects or mis-handles input |
 | 🟠 High | `shop-cart.spec.ts` | Customers can't build an order |
 | 🟠 High | `cart-operations.spec.ts` | Cart edits/persistence broken |
 | 🟠 High | `account-addresses.spec.ts` | Customers can't manage delivery addresses |
@@ -75,6 +79,14 @@ builds an admin client up front).
 - ✅ a syntactically-valid v4 UUID that isn't a real article → `400 nicht gefunden`
   (arbitrary IDs must never create a session)
 
+**`tests/checkout-pricing.spec.ts` — server-side pricing integrity** *(Stripe secrets + service role)*
+The highest-value money guarantee: the checkout must price every line from the
+database and ignore any client-supplied price.
+- ✅ A cart sent with a hostile `preis: 1` field still produces an order whose
+  `zwischensumme_brutto`, `steuer_summe` and `gesamt_brutto` are computed from the
+  seeded article's real `preis_brutto` (asserted directly in the `bestellungen`
+  row via the service-role client, then cleaned up).
+
 **`tests/checkout-ui.spec.ts` — checkout → Stripe** *(`STRIPE_SECRET_KEY`)*
 - ✅ Adds a product, clicks **"Zur Kasse"**, and asserts `POST /api/checkout`
   returns `200` with a real Stripe Checkout Session id (`cs_…`) — the definitive
@@ -89,6 +101,29 @@ builds an admin client up front).
 - ✅ login → dashboard renders with the 4 KPI cards
 - ✅ navigation to Produkte / Bestellungen / Termine
 - ✅ unauthenticated users are redirected to `/admin/login`
+
+**`tests/catalog.spec.ts` — public catalog API**
+Exercises the storefront read path against the seeded catalog.
+- ✅ `GET /api/shop/products` lists the 8 seeded active products, each priced (always runs)
+- ✅ `?search=Daikin` narrows results to matching products (always runs)
+- ✅ `?maxPreis=900` excludes products above the ceiling (always runs)
+- ✅ `GET /api/products/<bad>` → `400` before the DB is touched (always runs)
+- ✅ *(service role)* `GET /api/products/<unknown v4 uuid>` → `404` (no crash)
+- ✅ *(service role)* `GET /api/products/<seeded id>` → `200` with the right product
+
+**`tests/bookings-api.spec.ts` — booking API (`/api/bookings`)**
+Covers the "Termin buchen" feature at the API level.
+- ✅ a booking with no service → `400` (always runs)
+- ✅ a booking with a service but no time window → `400` (always runs)
+- ✅ *(service role)* a complete guest booking is created (`201`, `BK-…` number),
+  is retrievable via `GET /api/bookings?email=…`, then cleaned up.
+
+**`tests/contact.spec.ts` — contact / Anfrage form (`POST /api/contact`)** (always runs)
+Validation of the site's primary lead channel; every case rejects before any
+email is sent, so no secrets are needed.
+- ✅ a malformed JSON body → `400`
+- ✅ missing required fields (Vorname/Nachname/E-Mail) → `400`
+- ✅ an invalid e-mail address → `400`
 
 **`tests/shop-cart.spec.ts` — shop → cart flow** *(gated on catalog data)*
 - ✅ Opens the first product, adds it to the cart, verifies the confirmation toast
@@ -186,14 +221,18 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-40 passed, 1 skipped
+53 passed, 1 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
+  - passed:  6 catalog (list, search, maxPreis, bad-uuid 400, 404, seeded id)
+  - passed:  3 contact (bad JSON, missing fields, bad email)
+  - passed:  3 bookings-api (no service, no time, create+lookup)
   - passed:  2 shop-cart (add-to-cart, empty cart)
   - passed:  3 cart-operations (remove, quantity, persistence)
   - passed:  7 account-addresses (customer address CRUD)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
+  - passed:  1 checkout-pricing (DB pricing ignores client price)
   - passed:  4 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed)
   - passed:  5 checkout-validation (empty cart, >50 items, bad UUID, bad qty, unknown article)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
@@ -256,6 +295,14 @@ Prioritised by value ÷ effort. Items marked ✅ CI-safe need no external servic
 and are deterministic against the seeded test project.
 
 **✅ Done (implemented this round):**
+- ✅ **Pricing integrity at checkout** — a hostile client price is ignored; order
+  totals are computed from the DB `preis_brutto` (`checkout-pricing.spec.ts`).
+- ✅ **Public catalog API** — product listing, `search`/`maxPreis` filters, and
+  `/api/products/[id]` (400/404/200) (`catalog.spec.ts`).
+- ✅ **Booking API** — validation + a full create→lookup→cleanup round-trip
+  (`bookings-api.spec.ts`).
+- ✅ **Contact form validation** — malformed JSON, missing fields, invalid email
+  all rejected with `400` (`contact.spec.ts`).
 - ✅ **Cart operations** — quantity change, remove line item, persistence across
   reload (`cart-operations.spec.ts`).
 - ✅ **Admin login failure** — invalid credentials show an error and don't reach
@@ -266,15 +313,16 @@ and are deterministic against the seeded test project.
   (`security.spec.ts`).
 
 **Medium value (next candidates):**
-- **Pricing integrity at checkout** — seed an article with a `rabattpreis`
-  discount and assert the Checkout Session line item uses the discounted price
-  (proves H-5: server-side pricing). Needs `STRIPE_SECRET_KEY`.
-- **Variant surcharge** — an article variant adds its `preis_aufschlag`; assert
-  the session total reflects it, and that an unknown `variant_id` is ignored.
-- **Booking flow** — complete the multi-step `/booking` form and assert the
-  appointment persists (and later appears in `/admin/bookings`).
-- **Contact form** — submit `/contact`, assert the success state (email send is
-  fire-and-forget; assert the API `200`, not delivery).
+- **Variant surcharge** — seed an article with a `varianten` entry; assert a
+  variant adds its `preis_aufschlag` to the order total, and that an unknown
+  `variant_id` is ignored. Needs `STRIPE_SECRET_KEY` + a seeded variant.
+- **Discount price (`rabattpreis`)** — seed an article with a real discount and
+  assert the order uses the discounted price. Needs a seeded discounted product.
+- **Booking UI flow** — drive the multi-step `/booking` form end-to-end and
+  assert the appointment appears in `/admin/bookings` (the API path is now
+  covered by `bookings-api.spec.ts`).
+- **Contact happy path** — assert the `200` success state with a Resend
+  test/sandbox key (delivery itself remains fire-and-forget).
 
 **Lower value / harder in CI:**
 - **Rate limiting (429)** — hammer an endpoint past its window. Flaky with the

@@ -21,6 +21,12 @@ const testUserPassword = process.env.TEST_USER_PASSWORD;
 
 const ADDRESS_CARD = '[class*="border-slate-200 rounded-xl p-4"]';
 
+/**
+ * Fills the address add/edit form. Only the provided fields are touched.
+ *
+ * @param page - The authenticated /account page.
+ * @param opts - Optional field values; `lieferadresse` ticks the delivery-address checkbox.
+ */
 async function fillAddressForm(
   page: Page,
   opts: { strasse?: string; plz?: string; ort?: string; lieferadresse?: boolean } = {},
@@ -51,6 +57,7 @@ test.describe('Account → Address management', () => {
     await expect(page.getByRole('heading', { name: 'Adressen' })).toBeVisible({ timeout: 15000 });
   });
 
+  /** Seeded addresses render as cards, each exposing Bearbeiten/Löschen actions. */
   test('shows seeded addresses with edit/delete actions', async ({ page }) => {
     const cards = page.locator(ADDRESS_CARD);
     await expect(cards.first()).toBeVisible();
@@ -58,6 +65,7 @@ test.describe('Account → Address management', () => {
     await expect(cards.first().getByRole('button', { name: 'Löschen' })).toBeVisible();
   });
 
+  /** Submitting the form adds a new address and shows the success toast. */
   test('adds a new address as delivery address', async ({ page }) => {
     await fillAddressForm(page, {
       strasse: 'Teststraße 42',
@@ -71,6 +79,7 @@ test.describe('Account → Address management', () => {
     await expect(page.getByText('Teststraße 42').first()).toBeVisible();
   });
 
+  /** Editing an address's street and saving shows the "aktualisiert" toast. */
   test('edits an existing address', async ({ page }) => {
     const cards = page.locator(ADDRESS_CARD);
     await cards.first().getByRole('button', { name: 'Bearbeiten' }).click();
@@ -83,6 +92,7 @@ test.describe('Account → Address management', () => {
     await expect(page.getByText(/Adresse aktualisiert/i).first()).toBeVisible({ timeout: 8000 });
   });
 
+  /** Deleting an address removes its card and reduces the card count by one. */
   test('deletes an address', async ({ page }) => {
     const cards = page.locator(ADDRESS_CARD);
     const before = await cards.count();
@@ -92,6 +102,7 @@ test.describe('Account → Address management', () => {
     await expect(page.locator(ADDRESS_CARD)).toHaveCount(before - 1);
   });
 
+  /** Marking an address as default delivery persists via the update flow. */
   test('sets an address as the default delivery address', async ({ page }) => {
     const cards = page.locator(ADDRESS_CARD);
     await cards.first().getByRole('button', { name: 'Bearbeiten' }).click();
@@ -106,6 +117,7 @@ test.describe('Account → Address management', () => {
     ).toBeVisible({ timeout: 8000 });
   });
 
+  /** After adding an address the toast offers a working "Rückgängig" undo. */
   test('offers an undo action after adding an address', async ({ page }) => {
     await fillAddressForm(page, { strasse: 'Undo Teststraße 1', plz: '54321', ort: 'Undostadt' });
     await page.getByRole('button', { name: 'Adresse speichern' }).click();
@@ -116,6 +128,7 @@ test.describe('Account → Address management', () => {
     await expect(page.getByText(/rückgängig gemacht/i).first()).toBeVisible({ timeout: 8000 });
   });
 
+  /** Submitting an empty form surfaces the required-fields validation message. */
   test('validates required fields on submit', async ({ page }) => {
     await page.getByRole('button', { name: 'Adresse speichern' }).click();
     await expect(

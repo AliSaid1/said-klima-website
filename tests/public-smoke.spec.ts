@@ -22,6 +22,7 @@ const publicRoutes: { path: string; heading: string | RegExp }[] = [
 ];
 
 for (const route of publicRoutes) {
+  /** Each public route responds < 400, avoids the error boundary, and shows its heading. */
   test(`public route ${route.path} renders`, async ({ page }) => {
     const response = await page.goto(`${BASE_URL}${route.path}`, {
       waitUntil: 'domcontentloaded',
@@ -41,6 +42,7 @@ for (const route of publicRoutes) {
   });
 }
 
+/** The homepage's shop link navigates to /shop and loads the catalog page. */
 test('home has working navigation to the shop', async ({ page }) => {
   await page.goto(`${BASE_URL}/`);
   const shopLink = page.locator('a[href="/shop"]:visible').first();

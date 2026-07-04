@@ -7,6 +7,7 @@ import { BASE_URL } from './helpers/auth';
  * failure on a fresh environment. Stops before Stripe payment (external).
  */
 test.describe('Shop and cart', () => {
+  /** Drives the real shop UI: open a product, add it, and see it in the cart. */
   test('add a product to the cart and see it on the cart page', async ({ page }) => {
     // The dev server compiles /shop on first hit and products load via an
     // async fetch, so allow generous time before deciding the catalog is empty.
@@ -60,6 +61,7 @@ test.describe('Shop and cart', () => {
     ).toBeVisible();
   });
 
+  /** With no items stored, the cart page shows its empty state. */
   test('empty cart shows the empty state', async ({ page }) => {
     // Clear any persisted cart, then visit.
     await page.goto(`${BASE_URL}/cart`);

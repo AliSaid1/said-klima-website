@@ -12,6 +12,7 @@ import { BASE_URL } from './helpers/auth';
  * Gated on STRIPE_SECRET_KEY — creating the Checkout Session requires it.
  */
 test.describe('Checkout → Stripe', () => {
+  /** Adds a product, clicks "Zur Kasse", and asserts a Stripe Checkout Session (cs_…) is created. */
   test('redirects to Stripe hosted checkout after "Zur Kasse"', async ({ page }) => {
     test.skip(!process.env.STRIPE_SECRET_KEY, 'STRIPE_SECRET_KEY not set');
     test.setTimeout(90_000);

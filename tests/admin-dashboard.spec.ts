@@ -11,6 +11,7 @@ test.describe('Admin dashboard', () => {
     await adminLogin(page);
   });
 
+  /** The dashboard heading and the four KPI cards are rendered after login. */
   test('shows the dashboard with KPI cards', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Dashboard', level: 1 }),
@@ -26,6 +27,7 @@ test.describe('Admin dashboard', () => {
     }
   });
 
+  /** An authenticated admin can open products/orders/bookings without errors. */
   test('navigates to the main admin sections', async ({ page }) => {
     const sections = ['/admin/products', '/admin/orders', '/admin/bookings'];
 
@@ -39,6 +41,7 @@ test.describe('Admin dashboard', () => {
     }
   });
 
+  /** Anonymous visitors to /admin are redirected to the login page. */
   test('redirects unauthenticated users away from admin', async ({ browser }) => {
     // Fresh context with no session cookie.
     const context = await browser.newContext();

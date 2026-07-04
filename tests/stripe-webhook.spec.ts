@@ -19,6 +19,7 @@ import {
  * those aren't configured, so the suite never produces false failures.
  */
 test.describe('Stripe webhook', () => {
+  /** A webhook with no stripe-signature header is always rejected with 400. */
   test('rejects a request with no signature (400)', async ({ request }) => {
     const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
       headers: { 'content-type': 'application/json' },
@@ -27,6 +28,7 @@ test.describe('Stripe webhook', () => {
     expect(res.status()).toBe(400);
   });
 
+  /** A tampered/invalid signature fails verification and is rejected with 400. */
   test('rejects a forged/invalid signature (400)', async ({ request }) => {
     test.skip(!stripeConfigured(), 'STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not set');
 
@@ -40,6 +42,7 @@ test.describe('Stripe webhook', () => {
     expect(res.status()).toBe(400);
   });
 
+  /** A validly-signed but unhandled event type is acknowledged with 200 (no retries). */
   test('accepts a signed event of an unhandled type without side effects (200)', async ({ request }) => {
     test.skip(!stripeConfigured(), 'STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET not set');
 
@@ -59,6 +62,7 @@ test.describe('Stripe webhook', () => {
     expect((await res.json()).received).toBe(true);
   });
 
+  /** An async_payment_failed event transitions the seeded order to "fehlgeschlagen". */
   test('async_payment_failed marks the order as fehlgeschlagen', async ({ request }) => {
     test.skip(
       !stripeConfigured() || !serviceConfigured(),

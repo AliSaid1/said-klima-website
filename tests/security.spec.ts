@@ -10,12 +10,14 @@ import { BASE_URL } from './helpers/auth';
  * All are deterministic and need no secrets, so they always run.
  */
 test.describe('Security boundaries', () => {
+  /** GET /api/orders without a session returns 401 (authorization boundary). */
   test('protected API rejects anonymous requests (401)', async ({ request }) => {
     const res = await request.get(`${BASE_URL}/api/orders`);
     expect(res.status()).toBe(401);
     expect((await res.json()).error).toMatch(/autorisiert/i);
   });
 
+  /** Wrong admin credentials show an error and never reach the dashboard. */
   test('admin login rejects invalid credentials and stays on the login page', async ({ page }) => {
     await page.goto(`${BASE_URL}/admin/login`);
     await page.fill('input#email', 'nobody@said-klima.de');
@@ -27,6 +29,7 @@ test.describe('Security boundaries', () => {
     await expect(page).toHaveURL(/\/admin\/login/);
   });
 
+  /** An unknown path returns a 404 status rather than crashing the app. */
   test('unknown route returns 404', async ({ page }) => {
     const res = await page.goto(`${BASE_URL}/diese-seite-gibt-es-nicht-${Date.now()}`);
     expect(res?.status()).toBe(404);
