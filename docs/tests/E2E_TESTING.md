@@ -180,8 +180,13 @@ the network paths are gated (see notes).
 - ✅ *(`TEST_USER_*`)* the seeded customer logs in → success toast + redirect home
 - ✅ **Always runs:** the registration form renders with a link back to login
 - ✅ **Always runs:** mismatched passwords are rejected client-side (no network call)
-- ✅ *(Supabase anon + service role)* a new sign-up shows the confirm-email
-  screen; the throwaway user is deleted afterwards via the admin API
+- ✅ *(opt-in — `RUN_SIGNUP_E2E=1` + Supabase anon + service role)* a new sign-up
+  shows the confirm-email screen; the throwaway user is deleted afterwards via
+  the admin API. **Opt-in because** a real sign-up triggers a Supabase
+  confirmation email, and the built-in email service is rate-limited (a few/hour
+  without custom SMTP) — in a shared CI run `signUp()` errors and the success
+  screen never renders. Run it locally, or on a test project with email
+  confirmation disabled / a raised rate limit.
 - ⚠️ The empty-field "please fill in" toast is unreachable — the inputs are
   `required`, so the browser's native validation blocks the submit first (by
   design; not asserted).
@@ -258,7 +263,7 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-70 passed, 1 skipped
+69 passed, 2 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
@@ -268,8 +273,8 @@ the customer `kunde` user is auto-seeded):
   - passed:  2 shop-cart (add-to-cart, empty cart)
   - passed:  3 cart-operations (remove, quantity, persistence)
   - passed:  7 account-addresses (customer address CRUD)
-  - passed:  6 auth (login render, wrong creds, seeded login, register render,
-             password mismatch, sign-up + cleanup)
+  - passed:  5 auth (login render, wrong creds, seeded login, register render,
+             password mismatch)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
   - passed:  4 checkout-pricing (client price ignored, discount, variant, unknown variant)
   - passed: 10 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed,
@@ -277,6 +282,7 @@ the customer `kunde` user is auto-seeded):
              async_failed no-meta, async_failed idempotent)
   - passed:  7 checkout-validation (empty cart, >50 items, bad UUID, bad qty,
              qty>999, non-integer qty, unknown article)
+  - skipped: 1 auth sign-up (opt-in, RUN_SIGNUP_E2E unset)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
 ```
 
@@ -421,7 +427,7 @@ Status legend: ✅ automated & asserting an end state · ⚠️ partial / up-to-
 | 2025-02   | Checkout validation | Non-integer quantity (`menge: 1.5`) → `400`                                                              | `tests/checkout-validation.spec.ts` | ✅  |
 | 2025-02   | Test helpers        | Added `paymentIntentEvent`, `seedPayment`, `deletePayments`; unique `bestellnummer` suffix (parallel-safe) | `tests/helpers/stripe.ts`        | ✅     |
 | 2026-07   | Auth                | Customer **login** flow: form render, wrong-credentials error toast, seeded-user success + redirect        | `tests/auth.spec.ts`             | ✅     |
-| 2026-07   | Auth                | Customer **registration** flow: form render, client-side password-mismatch, successful sign-up + cleanup    | `tests/auth.spec.ts`             | ✅     |
+| 2026-07   | Auth                | Customer **registration** flow: form render, client-side password-mismatch, successful sign-up + cleanup (**opt-in** `RUN_SIGNUP_E2E` — Supabase email rate limit) | `tests/auth.spec.ts`             | ✅     |
 | 2026-07   | Auth helpers        | Added `supabaseConfigured`, `serviceRoleConfigured`, `deleteAuthUserByEmail`, customer-cred exports          | `tests/helpers/auth.ts`          | ✅     |
 | 2026-07   | Test config         | `playwright.config.ts` now auto-loads `.env.local` (dotenv) so local gated tests pick up credentials         | `playwright.config.ts`           | ✅     |
 
