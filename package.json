@@ -16,7 +16,8 @@
     "migrate": "node -r dotenv/config scripts/apply-migrations.mjs",
     "migrate:tls": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/apply-migrations.mjs",
     "seed:test": "node -r dotenv/config scripts/seed-test-db.mjs",
-    "seed:test:e2e": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/seed-test-db.mjs dotenv_config_path=.env.e2e.local"
+    "seed:test:e2e": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/seed-test-db.mjs dotenv_config_path=.env.e2e.local",
+    "copy:catalog": "npx cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 node -r dotenv/config scripts/copy-catalog.mjs dotenv_config_path=.env.local"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

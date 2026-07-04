@@ -299,7 +299,14 @@ around safely without touching real customers or money.
 | URL | `https://staging.kks-said.de` (custom) + the auto `…-git-develop-…vercel.app` | `https://www.kks-said.de` |
 | Supabase | **TEST** project (the same one CI seeds) | production project |
 | Stripe | **test-mode** keys | live keys (after go-live) |
-| Data shown | the seeded E2E catalog, not the real catalog | real catalog |
+| Data shown | the seeded E2E catalog (no images) | the current catalog |
+
+> **Note on "production" data today:** the production Supabase project currently
+> holds **placeholder/test catalog data**, not real customer products — which is
+> why it is paired with **test-mode** Stripe keys. At go-live you'll replace the
+> placeholder products with the real catalog and switch Stripe to live keys.
+> So production data isn't precious *yet*, but its **schema still backs the live
+> site**, so the "never seed against `.env.local`" rule below still applies.
 
 **Environment variables (Vercel → Settings → Environment Variables):**
 - Every var the app needs is added a **second time scoped to `Preview` only**
@@ -326,15 +333,39 @@ dedicated **test-mode** webhook endpoint in Stripe pointing at
 `https://staging.kks-said.de/api/webhooks/stripe` and use *its* signing secret
 for the Preview `STRIPE_WEBHOOK_SECRET`.
 
+**Copying the catalog into staging:** the seeded E2E catalog has no images, so
+staging can look bare. To mirror the current production catalog (rows **and**
+`product-images` storage files) into another project, use `scripts/copy-catalog.mjs`:
+
+```bash
+# SOURCE defaults to .env.local (production, read-only).
+# Provide the TARGET (staging/test) project creds, then:
+TARGET_SUPABASE_URL="https://<staging-ref>.supabase.co" \
+TARGET_SERVICE_ROLE_KEY="<staging service-role key>" \
+npm run copy:catalog
+# add DRY_RUN=1 to preview counts without writing, SKIP_STORAGE=1 to skip images.
+```
+
+The script upserts by primary key in FK-safe order and refuses to run if source
+and target are the same project.
+
+> ⚠️ **Ephemeral if the target is the CI test project.** That project is wiped +
+> reseeded on every CI run (`npm run seed:test`), so a copy into it lasts only
+> until the next `develop`/`main` push. For a **persistent** real-looking staging
+> catalog, create a **dedicated staging Supabase project** (separate from the CI
+> test project), point Vercel Preview at it, and copy the catalog there once.
+
 ---
 
 ## 7. Test credentials & running E2E locally
 
 > ⚠️ **This machine's `.env.local` points at the PRODUCTION Supabase project.**
 > The Playwright suite creates/deletes users, orders, and addresses, and
-> `npm run seed:test` **drops and recreates the whole `public` schema**. **Never
-> run E2E or the seeder against `.env.local`** — it would corrupt/wipe
-> production. Use the dedicated **TEST** project via `.env.e2e.local` instead.
+> `npm run seed:test` **drops and recreates the whole `public` schema**. The
+> production DB currently holds only placeholder catalog data, but its schema
+> still backs the live site — so wiping it would take the site down. **Never
+> run E2E or the seeder against `.env.local`.** Use the dedicated **TEST**
+> project via `.env.e2e.local` instead.
 
 | Where tests run | Where creds come from | What you must do |
 | --------------- | --------------------- | ---------------- |
