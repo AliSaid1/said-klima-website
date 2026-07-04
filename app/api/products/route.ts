@@ -1,3 +1,9 @@
+/**
+ * Product management API route for artikel (products). It lists public/admin
+ * product data and creates products with related lagerbestaende (stock),
+ * artikel_bilder (product images), and artikel_technische_daten (technical
+ * data).
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -6,6 +12,25 @@ import { slugify } from '@/lib/slugify';
 import { requireAdmin } from '@/lib/auth-guard';
 import { apiDbError, apiServerError } from '@/lib/api-response';
 
+/**
+ * Lists products with filters and pagination.
+ * GET /api/products.
+ *
+ * Auth: public for active artikel through the anon/session client; admin users,
+ * determined from `benutzer.rolle`, can view inactive products via the
+ * service-role client.
+ *
+ * Query params: `page`, `limit`, `search`, `kategorie`, `status`, `marke`,
+ * `sortBy`, and `sortOrder`.
+ *
+ * Response: `200` with `{ data, pagination }`; `500` when Supabase cannot read
+ * artikel and related rows.
+ *
+ * Side effects: none.
+ *
+ * @param request - The incoming NextRequest containing filter, sort, and pagination query parameters.
+ * @returns A NextResponse containing product rows and pagination metadata.
+ */
 // GET /api/products
 // - Admin (service_role client): sees ALL products incl. inactive — bypasses RLS
 // - Public/anon (anon client): only aktiv=true — RLS enforced
@@ -68,6 +93,26 @@ export async function GET(request: NextRequest) {
   });
 }
 
+/**
+ * Creates a product and its related stock, technical-data, and image rows.
+ * POST /api/products.
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Request body: validated by `createArtikelSchema`; may include product fields,
+ * `bilder`, `technische_daten_rte`, and raw `bestand`/`mindestbestand`.
+ *
+ * Response: `201` with `{ data }`; `400` for schema validation failures;
+ * `401`/`403` from the admin guard; `409` for translated unique conflicts such
+ * as slug or article-number collisions; `500` for other Supabase errors.
+ *
+ * Side effects: inserts `artikel`, `lagerbestaende`, optional
+ * `artikel_technische_daten`, and optional `artikel_bilder`; auto-generates or
+ * retries slugs when necessary.
+ *
+ * @param request - The incoming NextRequest carrying the product JSON body.
+ * @returns A NextResponse containing the created product row.
+ */
 // POST /api/products — admin only
 export async function POST(request: NextRequest) {
   const { error: authErr } = await requireAdmin();

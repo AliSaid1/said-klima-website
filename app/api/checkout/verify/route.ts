@@ -1,3 +1,9 @@
+/**
+ * Checkout verification API route for synchronizing a completed or pending
+ * Stripe Checkout Session back into Supabase. It reads and updates bestellungen
+ * (orders), bestellpositionen (order line items), and zahlungen (payments) using
+ * an admin client after Stripe confirms the session state.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
@@ -16,6 +22,29 @@ import { createAdminClient } from '@/lib/supabase/admin';
 //   4. `status` is set based on payment_status:
 //      - 'paid'   → 'bezahlt' (instant payment: card, paypal, etc.)
 //      - 'unpaid' → 'warten_auf_zahlung' (delayed payment: bank transfer)
+/**
+ * Verifies a Stripe Checkout session and returns normalized order details.
+ * GET /api/checkout/verify.
+ *
+ * Auth: public, guarded by possession of a valid Stripe `session_id`; writes use
+ * the Supabase service-role client.
+ *
+ * Query params: `session_id` is required and must reference a Stripe Checkout
+ * Session whose `payment_status` is `paid` or `unpaid` and whose metadata
+ * contains `bestellung_id`.
+ *
+ * Response: `200` with order, customer, address, payment, item, and pending
+ * payment details; `400` when `session_id` is missing; `402` when payment is not
+ * complete or pending; `404` when Stripe metadata or the bestellung (order) is
+ * missing; `500` when Stripe or Supabase verification fails.
+ *
+ * Side effects: idempotently updates bestellungen with payment status, Stripe
+ * identifiers, billing/delivery address snapshots, guest email, payment method,
+ * and order timestamp; creates one zahlungen record when absent.
+ *
+ * @param request - The incoming NextRequest containing the `session_id` query parameter.
+ * @returns A NextResponse with verified checkout/order data or an error.
+ */
 export async function GET(request: NextRequest) {
   const sessionId = request.nextUrl.searchParams.get('session_id');
 
@@ -203,5 +232,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sitzung konnte nicht verifiziert werden' }, { status: 500 });
   }
 }
-
-

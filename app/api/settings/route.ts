@@ -1,8 +1,28 @@
+/**
+ * Company settings API route for firmeneinstellungen (company settings). It
+ * exposes the singleton settings row and allows authenticated updates for
+ * business, tax, contact, and checkout configuration.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { updateFirmeneinstellungenSchema } from '@/lib/validators/firmeneinstellungen';
 
+/**
+ * Fetches the singleton company settings row.
+ * GET /api/settings.
+ *
+ * Auth: public; uses the Supabase service-role client for the singleton read.
+ *
+ * Request shape: no body or query parameters are read.
+ *
+ * Response: `200` with `{ data }`; `500` when `firmeneinstellungen` cannot be
+ * read.
+ *
+ * Side effects: none.
+ *
+ * @returns A NextResponse containing the company settings row.
+ */
 // GET /api/settings — Fetch company settings (singleton)
 export async function GET() {
   const admin = createAdminClient();
@@ -20,6 +40,22 @@ export async function GET() {
   return NextResponse.json({ data });
 }
 
+/**
+ * Updates or creates the singleton company settings row.
+ * PUT /api/settings.
+ *
+ * Auth: authenticated user session; database write uses the service-role client.
+ *
+ * Request body: fields validated by `updateFirmeneinstellungenSchema`.
+ *
+ * Response: `200` with `{ data }`; `400` for validation errors; `401` when no
+ * user is authenticated; `500` for Supabase insert/update failures.
+ *
+ * Side effects: inserts or updates the single `firmeneinstellungen` row.
+ *
+ * @param request - The incoming NextRequest carrying company setting updates.
+ * @returns A NextResponse containing the inserted or updated settings row.
+ */
 // PUT /api/settings — Update company settings
 export async function PUT(request: NextRequest) {
   // Authenticate via the user session (anon client)
@@ -79,4 +115,3 @@ export async function PUT(request: NextRequest) {
 
   return NextResponse.json({ data });
 }
-

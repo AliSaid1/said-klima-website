@@ -1,7 +1,31 @@
+/**
+ * Booking reminder cron API route. It scans buchungen (bookings) scheduled for
+ * the next day, joins benutzer (user) and dienstleistungen (service) details,
+ * sends reminder emails, and marks successful reminders as sent.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendBookingReminder } from '@/lib/email';
 
+/**
+ * Sends one-day-ahead booking reminder emails.
+ * GET /api/cron/booking-reminders.
+ *
+ * Auth: cron-secret protected via `Authorization: Bearer ${CRON_SECRET}`.
+ *
+ * Request shape: no body or query parameters are read; only the authorization
+ * header is validated.
+ *
+ * Response: `200` with `{ success, sent, failed, total }`; `401` when the cron
+ * secret is missing or invalid; `500` when fetching buchungen fails.
+ *
+ * Side effects: sends Resend booking reminder emails via `sendBookingReminder`
+ * and updates `buchungen.erinnerung_gesendet` to `true` for successful sends.
+ * Intended schedule: daily, before the next day's appointments.
+ *
+ * @param request - The incoming NextRequest containing the cron authorization header.
+ * @returns A NextResponse summarizing reminder delivery counts.
+ */
 // GET /api/cron/booking-reminders — Daily cron job
 // Sends reminders for bookings happening tomorrow
 export async function GET(request: NextRequest) {
@@ -80,5 +104,3 @@ export async function GET(request: NextRequest) {
     total: bookings?.length || 0,
   });
 }
-
-

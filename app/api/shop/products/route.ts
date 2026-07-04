@@ -1,6 +1,29 @@
+/**
+ * Public shop product listing API route for artikel (products). It exposes
+ * active catalog data with marken, kategorien, lagerbestaende (stock), images,
+ * technical data, variants, and public Supabase Storage URLs.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Lists active products for the public shop.
+ * GET /api/shop/products.
+ *
+ * Auth: public through the Supabase session/anon client with RLS-enforced
+ * `aktiv=true` filtering.
+ *
+ * Query params: optional `search`, `kategorie`, `marke`, and `maxPreis`.
+ *
+ * Response: `200` with `{ data }`; `500` when Supabase cannot read artikel or
+ * related rows.
+ *
+ * Side effects: none; maps image storage paths to public URLs and filters
+ * `maxPreis` in memory.
+ *
+ * @param request - The incoming NextRequest containing shop filter query parameters.
+ * @returns A NextResponse containing public product cards/details for the shop.
+ */
 // GET /api/shop/products — Public endpoint for shop products
 export async function GET(request: NextRequest) {
   const supabase = await createClient();

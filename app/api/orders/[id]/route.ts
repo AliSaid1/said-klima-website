@@ -1,8 +1,21 @@
+/**
+ * Single-order API route for bestellungen (orders). It reads detailed order
+ * data with bestellpositionen (order line items), allows admin status/note
+ * updates with email notifications, and deletes abandoned open orders.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendTemplateEmail } from '@/lib/email';
 
+/**
+ * Resolves the current Supabase session and admin role.
+ *
+ * Auth: reads the session from the Supabase server client and checks
+ * `benutzer.rolle` via the service-role client.
+ *
+ * @returns The authenticated user or null, whether they are admin, and the session-scoped Supabase client.
+ */
 // ── Helper: determine if current user is admin ───────────
 async function getAuthContext() {
   const supabase = await createClient();
@@ -19,6 +32,25 @@ async function getAuthContext() {
   return { user, isAdmin: benutzer?.rolle === 'admin', supabase };
 }
 
+/**
+ * Fetches one order by ID.
+ * GET /api/orders/[id].
+ *
+ * Auth: authenticated user. Admin users can read any bestellung; regular users
+ * can only read orders where `benutzer_id` matches their user ID.
+ *
+ * Route params: `id` is the bestellung (order) ID.
+ *
+ * Response: `200` with `{ data }` including benutzer and bestellpositionen;
+ * `401` when unauthenticated; `403` when a non-admin accesses another user's
+ * order; `404` when the order is missing.
+ *
+ * Side effects: none.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised `id` parameter.
+ * @returns A NextResponse containing the order detail row or an error.
+ */
 // GET /api/orders/[id]
 export async function GET(
   request: NextRequest,
@@ -56,6 +88,28 @@ export async function GET(
   return NextResponse.json({ data });
 }
 
+/**
+ * Updates order status and/or notes.
+ * PUT /api/orders/[id].
+ *
+ * Auth: admin only; requires an authenticated user whose `benutzer.rolle` is
+ * `admin`.
+ *
+ * Route params: `id` is the bestellung (order) ID. Request body may include
+ * `status`, `notiz` with `text`, or `notizen_override` for replacing the notes
+ * array.
+ *
+ * Response: `200` with `{ data }`; `401` when unauthenticated; `403` when not
+ * admin; `404` when the order is missing; `500` when the Supabase update fails.
+ *
+ * Side effects: updates `bestellungen.status` and/or `notizen`; sends a
+ * `bestellung_status` template email when the status changes and an email
+ * address is available.
+ *
+ * @param request - The incoming NextRequest carrying the update JSON body.
+ * @param context - Route context containing the promised `id` parameter.
+ * @returns A NextResponse containing the updated order row or an error.
+ */
 // PUT /api/orders/[id] — Update status or add note (admin only)
 export async function PUT(
   request: NextRequest,
@@ -169,6 +223,25 @@ export async function PUT(
   return NextResponse.json({ data });
 }
 
+/**
+ * Deletes an abandoned open order.
+ * DELETE /api/orders/[id].
+ *
+ * Auth: admin only.
+ *
+ * Route params: `id` is the bestellung (order) ID. No request body is read.
+ *
+ * Response: `200` with `{ success, bestellnummer }`; `400` when the order is
+ * not in status `offen`; `403` when the caller is not admin; `404` when the
+ * order is missing; `500` when deletion fails.
+ *
+ * Side effects: deletes related bestellpositionen and zahlungen before deleting
+ * the bestellung itself.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised `id` parameter.
+ * @returns A NextResponse confirming deletion or describing the error.
+ */
 // DELETE /api/orders/[id] — Delete an abandoned "offen" order (admin only)
 export async function DELETE(
   request: NextRequest,

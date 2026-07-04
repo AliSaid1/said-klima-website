@@ -1,8 +1,32 @@
+/**
+ * Orders API route for listing bestellungen (orders). It supports admin-wide
+ * views and authenticated benutzer (user) self-service history, including
+ * joined user profile metadata from Supabase.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { apiServerError } from '@/lib/api-response';
 
+/**
+ * Lists orders with pagination and optional filtering.
+ * GET /api/orders.
+ *
+ * Auth: authenticated user. Admin users, determined from `benutzer.rolle`, can
+ * read all bestellungen through the service-role client; regular users are
+ * scoped to their own `benutzer_id`.
+ *
+ * Query params: `page`, `limit`, optional `status`, and optional `search`
+ * against `bestellnummer`.
+ *
+ * Response: `200` with `{ data, pagination }`; `401` when unauthenticated;
+ * `500` when Supabase returns a query error.
+ *
+ * Side effects: none.
+ *
+ * @param request - The incoming NextRequest containing pagination/filter query parameters.
+ * @returns A NextResponse containing matching order rows and pagination metadata.
+ */
 // GET /api/orders
 // - Admin: all orders with full pagination/filter/sort
 // - Regular user: only their own orders
@@ -60,4 +84,3 @@ export async function GET(request: NextRequest) {
     },
   });
 }
-

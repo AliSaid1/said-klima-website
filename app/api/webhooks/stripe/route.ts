@@ -1,3 +1,9 @@
+/**
+ * Stripe webhook API route for e-commerce order payment lifecycle events. It
+ * verifies Stripe signatures, updates bestellungen (orders), zahlungen
+ * (payments), and zahlungsvorgaenge (payment events), and sends order/payment
+ * emails with optional PDF attachments.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -6,6 +12,22 @@ import { generateOrderConfirmationPdf } from '@/lib/pdf';
 import type { OrderPdfData } from '@/lib/pdf';
 import Stripe from 'stripe';
 
+/**
+ * Sends customer/admin order emails and generates an order confirmation PDF.
+ *
+ * Reads bestellungen (orders) and bestellpositionen (order line items), creates
+ * an in-memory PDF, sends the customer order confirmation, and sends an admin
+ * new-order notification. Email sending is skipped when no customer email or no
+ * configured Resend API key is available.
+ *
+ * @param supabase - Supabase service-role client used to read order data.
+ * @param bestellungId - The bestellung (order) ID from Stripe metadata.
+ * @param session - The verified Stripe Checkout Session.
+ * @param resolvedPaymentMethod - Normalized payment method label, such as card brand or banküberweisung.
+ * @param rechnungsAdresse - Billing address snapshot from Stripe or the database.
+ * @param lieferAdresse - Delivery address snapshot from Stripe or the database.
+ * @returns A promise that resolves after email/PDF side effects complete.
+ */
 // ── Helper: Send confirmation emails + PDF for a paid order ───────────────
 // Called from both checkout.session.completed (instant payment) and
 // checkout.session.async_payment_succeeded (delayed payment e.g. bank transfer).
@@ -103,6 +125,37 @@ async function sendOrderConfirmationEmails(
   });
 }
 
+/**
+ * Handles Stripe webhook callbacks.
+ * POST /api/webhooks/stripe.
+ *
+ * Auth: public transport endpoint protected by Stripe signature verification
+ * using the `stripe-signature` header and `STRIPE_WEBHOOK_SECRET`.
+ *
+ * Request shape: raw Stripe webhook body. No query parameters are read.
+ *
+ * Response: `200` with `{ received: true }`; `400` when the signature is
+ * missing or invalid. Unhandled event types are acknowledged after logging.
+ *
+ * Handled events:
+ * - `checkout.session.completed`: stores Stripe/customer/address data, sets
+ *   order status to `bezahlt` or `warten_auf_zahlung`, creates/records payment
+ *   rows, and sends paid or pending-order emails.
+ * - `checkout.session.async_payment_succeeded`: marks delayed payments as paid,
+ *   updates zahlungen, records the event, and sends confirmation emails/PDF.
+ * - `checkout.session.async_payment_failed`: marks delayed payments failed,
+ *   records the event, and sends a payment-failed email.
+ * - `payment_intent.payment_failed`: records failed payment attempts for the
+ *   related order when metadata contains `bestellung_id`.
+ * - `checkout.session.expired`: marks still-open orders as `storniert`.
+ *
+ * Side effects: Supabase writes to bestellungen, zahlungen, and
+ * zahlungsvorgaenge; sends Resend emails through `lib/email`; generates order
+ * confirmation PDFs for successful payments.
+ *
+ * @param request - The incoming NextRequest containing the raw Stripe webhook body.
+ * @returns A NextResponse acknowledging the webhook or reporting signature errors.
+ */
 // POST /api/webhooks/stripe — Handle Stripe webhook events
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -590,4 +643,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true });
 }
-

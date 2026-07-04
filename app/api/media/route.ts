@@ -1,7 +1,29 @@
+/**
+ * Admin media API route for medien_dateien (media files). It lists uploaded
+ * product image metadata and derives public Supabase Storage URLs from the
+ * `product-images` bucket.
+ */
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * Lists uploaded media files for administrators.
+ * GET /api/media.
+ *
+ * Auth: authenticated admin; first reads the Supabase user session, then checks
+ * `benutzer.rolle`.
+ *
+ * Request shape: no body or query parameters are read.
+ *
+ * Response: `200` with `{ data }` including public URLs; `401` when no user is
+ * authenticated; `403` when the user is not admin; `500` when reading
+ * `medien_dateien` fails.
+ *
+ * Side effects: none; only computes public Storage URLs.
+ *
+ * @returns A NextResponse containing media metadata and public URLs.
+ */
 // GET /api/media — List all uploaded media files (admin only)
 export async function GET() {
   const supabase = await createClient();

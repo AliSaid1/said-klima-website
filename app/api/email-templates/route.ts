@@ -1,3 +1,8 @@
+/**
+ * Admin email template API route for email_vorlagen (email templates). It lists
+ * and updates sanitized template subjects and HTML bodies used by transactional
+ * emails.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-guard';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -7,6 +12,21 @@ import { sanitizeHtml, sanitizeText } from '@/lib/sanitize';
 const MAX_BETREFF_LEN  = 500;
 const MAX_INHALT_LEN   = 100_000; // 100 KB — generous but bounded
 
+/**
+ * Lists all email templates.
+ * GET /api/email-templates.
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Request shape: no body or query parameters are read.
+ *
+ * Response: `200` with `{ data }` ordered by template type; `401`/`403` from
+ * the admin guard; `500` when Supabase cannot read `email_vorlagen`.
+ *
+ * Side effects: none.
+ *
+ * @returns A NextResponse containing email template rows.
+ */
 // GET /api/email-templates — admin only
 export async function GET() {
   const { error: authErr } = await requireAdmin();
@@ -22,6 +42,25 @@ export async function GET() {
   return NextResponse.json({ data });
 }
 
+/**
+ * Updates one email template's subject and/or HTML content.
+ * PUT /api/email-templates.
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Request body: `{ id, betreff?, inhalt_html? }`; `id` is required. `betreff`
+ * is text-sanitized and length-limited, while `inhalt_html` is truncated and
+ * HTML-sanitized.
+ *
+ * Response: `200` with `{ data }`; `400` for missing ID, empty sanitized
+ * subject, or no updatable fields; `401`/`403` from the admin guard; `500` for
+ * Supabase update failures.
+ *
+ * Side effects: updates `email_vorlagen`.
+ *
+ * @param request - The incoming NextRequest carrying the update JSON body.
+ * @returns A NextResponse containing the updated template row.
+ */
 // PUT /api/email-templates — admin only, sanitize + length-limit all fields
 export async function PUT(request: NextRequest) {
   const { error: authErr } = await requireAdmin();

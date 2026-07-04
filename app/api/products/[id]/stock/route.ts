@@ -1,8 +1,28 @@
+/**
+ * Product stock API route for lagerbestaende (stock) rows associated with an
+ * artikel (product). It supports public stock reads and admin stock upserts.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/auth-guard';
 
+/**
+ * Reads stock for one product.
+ * GET /api/products/[id]/stock.
+ *
+ * Auth: public through the Supabase session/anon client; RLS controls access.
+ *
+ * Route params: `id` is the artikel (product) ID used as `artikel_id`.
+ *
+ * Response: `200` with `{ data }`; `404` when no stock row is found.
+ *
+ * Side effects: none.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised product `id`.
+ * @returns A NextResponse containing stock data or a not-found error.
+ */
 // GET /api/products/[id]/stock — public read (anon client, RLS allows public select)
 export async function GET(
   request: NextRequest,
@@ -24,6 +44,25 @@ export async function GET(
   return NextResponse.json({ data });
 }
 
+/**
+ * Updates or creates stock for one product.
+ * PUT /api/products/[id]/stock.
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Route params: `id` is the artikel (product) ID. Request body may include
+ * `bestand` and/or `mindestbestand`.
+ *
+ * Response: `200` with `{ data }`; `401`/`403` from the admin guard; `500` when
+ * Supabase insert/update fails.
+ *
+ * Side effects: updates an existing `lagerbestaende` row or inserts one for the
+ * product when absent.
+ *
+ * @param request - The incoming NextRequest carrying stock update fields.
+ * @param context - Route context containing the promised product `id`.
+ * @returns A NextResponse containing the stock row or an error.
+ */
 // PUT /api/products/[id]/stock — admin only
 export async function PUT(
   request: NextRequest,

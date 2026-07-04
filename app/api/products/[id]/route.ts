@@ -1,3 +1,9 @@
+/**
+ * Single-product management API route for artikel (products). It reads, updates,
+ * and deletes product records plus related marken, kategorien, lagerbestaende
+ * (stock), artikel_bilder, artikel_technische_daten, and historical
+ * bestellpositionen references.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/auth-guard';
@@ -8,6 +14,24 @@ import { apiDbError, apiError } from '@/lib/api-response';
 // UUID v4 guard — prevents malformed IDs reaching Supabase (avoids cryptic 22P02 errors)
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/**
+ * Fetches one product by UUID.
+ * GET /api/products/[id].
+ *
+ * Auth: public; uses the Supabase service-role client to return the full admin
+ * product representation.
+ *
+ * Route params: `id` must be a UUID v4 artikel (product) ID.
+ *
+ * Response: `200` with `{ data }`; `400` for malformed IDs; `404` when no
+ * product exists; `500` for other Supabase errors.
+ *
+ * Side effects: none.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised product `id`.
+ * @returns A NextResponse containing the product detail row or an error.
+ */
 // GET /api/products/[id]
 export async function GET(
   request: NextRequest,
@@ -46,6 +70,27 @@ export async function GET(
   return NextResponse.json({ data });
 }
 
+/**
+ * Updates one product and optional related rows.
+ * PUT /api/products/[id].
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Route params: `id` must be a UUID v4 artikel (product) ID. Request body is
+ * JSON validated by `updateArtikelSchema` and may include product fields,
+ * `bilder`, `technische_daten_rte`, `bestand`, and `mindestbestand`.
+ *
+ * Response: `200` with `{ data }`; `400` for malformed IDs, invalid JSON, or
+ * validation errors; `401`/`403` from the admin guard; `409` when slug retries
+ * are exhausted; `500` for Supabase errors.
+ *
+ * Side effects: updates `artikel`, replaces `artikel_technische_daten`, replaces
+ * `artikel_bilder`, and upserts `lagerbestaende` as requested.
+ *
+ * @param request - The incoming NextRequest carrying the product update JSON body.
+ * @param context - Route context containing the promised product `id`.
+ * @returns A NextResponse containing the updated product row or an error.
+ */
 // PUT /api/products/[id] — admin only
 export async function PUT(
   request: NextRequest,
@@ -242,6 +287,25 @@ export async function PUT(
   return NextResponse.json({ data });
 }
 
+/**
+ * Deletes one product after detaching historical order positions.
+ * DELETE /api/products/[id].
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Route params: `id` must be a UUID v4 artikel (product) ID. No body is read.
+ *
+ * Response: `200` with `{ success: true }`; `400` for malformed IDs;
+ * `401`/`403` from the admin guard; `500` for Supabase errors.
+ *
+ * Side effects: nulls `bestellpositionen.artikel_id`, deletes related
+ * `lagerbestaende`, then deletes the `artikel` row; image and technical-data
+ * rows are expected to cascade.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised product `id`.
+ * @returns A NextResponse confirming deletion or describing the error.
+ */
 // DELETE /api/products/[id] — admin only
 export async function DELETE(
   request: NextRequest,
@@ -280,4 +344,3 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
-

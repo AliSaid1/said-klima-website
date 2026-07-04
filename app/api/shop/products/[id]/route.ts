@@ -1,8 +1,31 @@
+/**
+ * Public shop product detail API route for artikel (products). It resolves an
+ * active product by UUID or slug and returns catalog, image, stock, variant, and
+ * technical-data details for storefront rendering.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Fetches one active shop product by UUID or slug.
+ * GET /api/shop/products/[id].
+ *
+ * Auth: public through the Supabase session/anon client; only `aktiv=true`
+ * artikel are returned.
+ *
+ * Route params: `id` may be an artikel UUID or a human-readable slug.
+ *
+ * Response: `200` with `{ data }`; `404` when no active product matches.
+ *
+ * Side effects: none; maps image storage paths to public URLs and sorts images
+ * and technical-data rows for display.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the promised product UUID or slug.
+ * @returns A NextResponse containing public product detail data or a not-found error.
+ */
 // GET /api/shop/products/[id]
 // Accepts either a UUID (e.g. /shop/2959b2b8-...) for backward-compat or a
 // human-readable slug (e.g. /shop/daikin-sensira-35kw).

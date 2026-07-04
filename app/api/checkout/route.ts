@@ -1,3 +1,10 @@
+/**
+ * Checkout API route for creating Stripe Checkout sessions for artikel (product)
+ * purchases. It validates cart input, reads artikel, lagerbestaende (stock via
+ * product relations), firmeneinstellungen (company settings), and benutzer
+ * (user) data, then writes bestellungen (orders) and bestellpositionen (order
+ * line items) before delegating payment collection to Stripe.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
@@ -12,6 +19,30 @@ interface CartItem {
   menge: number;
 }
 
+/**
+ * Creates a Stripe Checkout Session for the current Warenkorb (cart).
+ * POST /api/checkout.
+ *
+ * Auth: public; optionally associates the order with the authenticated
+ * benutzer (user) when a Supabase session exists. DB writes use the Supabase
+ * service-role client.
+ *
+ * Request body: `{ items, kunden_email? }`, where each item contains
+ * `artikel_id`, optional `variant_id`, and `menge`. The route validates body
+ * size, non-empty cart, max 50 items, UUID artikel IDs, and quantity range.
+ *
+ * Response: `200` with `{ url, session_id, bestellung_id }`; `400` for invalid
+ * cart, IDs, quantities, missing/unavailable artikel, or validation failures;
+ * `413` for oversized bodies; `500` for Supabase/Stripe server errors.
+ *
+ * Side effects: reads artikel prices server-side, reads versandkosten (shipping
+ * cost) settings, creates/reuses a Stripe customer, inserts bestellungen and
+ * bestellpositionen, stores Stripe session/customer IDs, and may update the
+ * authenticated user's `stripe_customer_id`.
+ *
+ * @param request - The incoming NextRequest carrying the checkout JSON body.
+ * @returns A NextResponse containing the Stripe Checkout redirect URL and IDs.
+ */
 // POST /api/checkout — Create Stripe Checkout Session
 // H-4: Idempotency key added so duplicate requests don't create duplicate sessions.
 // H-5: Prices are fetched server-side from the DB — client-supplied prices are IGNORED.

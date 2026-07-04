@@ -1,3 +1,8 @@
+/**
+ * Abandoned order cleanup cron API route. It removes stale bestellungen (orders)
+ * with status `offen`, plus related bestellpositionen (order line items) and
+ * zahlungen (payments), using the Supabase service-role client.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -15,6 +20,21 @@ import { createAdminClient } from '@/lib/supabase/admin';
  *
  * The bestellpositionen FK (bestellung_id) should cascade-delete.
  * If not, we delete them explicitly first.
+ *
+ * Auth: cron-secret protected via `Authorization: Bearer ${CRON_SECRET}`.
+ *
+ * Request shape: no body or query parameters are read; only the authorization
+ * header is validated.
+ *
+ * Response: `200` with deletion count and deleted bestellnummer values, or
+ * `{ deleted: 0, message }`; `401` for invalid cron secret; `500` for Supabase
+ * fetch/delete failures or unexpected cleanup errors.
+ *
+ * Side effects: deletes bestellpositionen, zahlungen, and bestellungen older
+ * than three days with status `offen`. Intended schedule: daily around 03:00.
+ *
+ * @param request - The incoming NextRequest containing the cron authorization header.
+ * @returns A NextResponse summarizing deleted abandoned orders.
  */
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -88,4 +108,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Cleanup failed' }, { status: 500 });
   }
 }
-

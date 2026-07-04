@@ -1,8 +1,29 @@
+/**
+ * Technician availability seeding API route. It creates default
+ * techniker_verfuegbarkeit rows for active techniker (technicians) that do not
+ * yet have availability configured.
+ */
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { requireAdmin } from '@/lib/auth-guard';
 import { apiServerError } from '@/lib/api-response';
 
+/**
+ * Seeds default weekday availability for active technicians.
+ * POST /api/technicians/seed-availability.
+ *
+ * Auth: admin via `requireAdmin`.
+ *
+ * Request shape: no body or query parameters are read.
+ *
+ * Response: `200` with `{ message, seeded, total? }`; `401`/`403` from the
+ * admin guard; `500` when fetching technicians fails.
+ *
+ * Side effects: inserts Monday-Friday 08:00-17:00 availability into
+ * `techniker_verfuegbarkeit` only for technicians without existing entries.
+ *
+ * @returns A NextResponse summarizing how many technicians were seeded.
+ */
 // POST /api/technicians/seed-availability — admin only
 // M-3: Added admin guard — previously this endpoint had NO authentication at all.
 // Creates default availability (Mo-Fr 08:00–17:00) for all active technicians

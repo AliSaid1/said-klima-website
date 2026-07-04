@@ -1,3 +1,8 @@
+/**
+ * Order PDF API route for generating a downloadable Bestellbestätigung (order
+ * confirmation). It verifies Stripe Checkout ownership, reads bestellungen and
+ * bestellpositionen, and streams a generated PDF response.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getStripe } from '@/lib/stripe';
@@ -11,6 +16,23 @@ import type { OrderPdfData } from '@/lib/pdf';
  * Requires a valid Stripe session_id that matches the order for security.
  * This allows the customer to download the PDF directly from the success page
  * even if the email was not delivered.
+ *
+ * Auth: public but protected by a valid Stripe `session_id` whose metadata
+ * matches the requested bestellung (order) ID and whose payment is paid.
+ *
+ * Query params: required `session_id`. Route params: required `id` bestellung
+ * ID.
+ *
+ * Response: `200` with `application/pdf` attachment; `400` when required
+ * parameters are missing; `402` when payment is incomplete; `403` when the
+ * Stripe session does not match the order; `404` when the order is missing;
+ * `500` when Stripe, Supabase, or PDF generation fails.
+ *
+ * Side effects: generates a PDF in memory; no database writes.
+ *
+ * @param request - The incoming NextRequest containing `session_id`.
+ * @param context - Route context containing the promised order `id` parameter.
+ * @returns A NextResponse streaming the generated PDF or an error JSON body.
  */
 export async function GET(
   request: NextRequest,
@@ -107,5 +129,4 @@ export async function GET(
     return NextResponse.json({ error: 'PDF konnte nicht erstellt werden' }, { status: 500 });
   }
 }
-
 
