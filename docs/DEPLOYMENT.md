@@ -98,33 +98,120 @@ Benefits:
 
 ---
 
-## 3. How to set it up (checklist)
+## 3. Branch protection vs. wiring Vercel to gate on CI — which is better?
 
-1. **Create a working branch** instead of committing straight to `main`:
-   ```bash
-   git checkout -b feature/my-change
-   # ...work...
-   git push -u origin feature/my-change   # open a PR on GitHub
-   ```
-2. **Turn on branch protection for `main`** (GitHub → Settings → Branches → Add
-   rule):
-   - ✅ *Require a pull request before merging*
-   - ✅ *Require status checks to pass* → select **"Playwright E2E"**
-   - (optional) *Require branches to be up to date before merging*
-3. **Confirm Vercel Preview Deployments are on** (Vercel → Project → Settings →
-   Git). They're on by default: every branch/PR gets its own URL.
-4. *(Optional, stricter)* **Gate the production promotion on CI too.** Branch
-   protection already blocks the merge, so this is belt-and-suspenders. Options:
-   - Vercel **Deployment Protection**, or
-   - a Vercel **"Ignored Build Step"** that only builds when checks pass, or
-   - drive the deploy from a GitHub Actions job that runs *after* E2E.
-5. **Know your escape hatch:** if a bad deploy ever slips through, use Vercel →
-   Deployments → **Instant Rollback** to re-promote the last good build in
-   seconds (no rebuild needed).
+Short answer: **branch protection is both easier and better** for this project.
+Do that. Wiring Vercel to gate on CI is more work, partly redundant, and only
+worth it as an *extra* layer later.
+
+| | **A. Branch protection** (recommended) | **B. Wire Vercel to gate on CI** |
+| --- | --- | --- |
+| Where it lives | GitHub (a few checkboxes) | Vercel build settings + a script / GitHub deploy job |
+| Effort | ~2 minutes, no code | Moderate: custom "Ignored Build Step" or a GH Actions deploy pipeline |
+| What it stops | Bad code from **merging into `main`** (so it never deploys) | A bad commit already on `main` from being **promoted** |
+| Preview URLs | ✅ yes (per PR) | ✅ yes |
+| Redundancy | — | Mostly redundant *if* you already have branch protection |
+| Failure mode | Simple: red check = can't merge | More moving parts to debug |
+
+**Why A wins:** branch protection stops the problem at the source — nothing bad
+ever reaches `main`, so Vercel only ever deploys green code. Option B tries to
+catch the problem *after* it's already on `main`, which is later and fiddlier.
+Since you deploy `main`, guarding `main` is exactly the right lever.
+
+> Keep B in your back pocket only if you later want a hard technical block on
+> promotion (e.g. multiple people pushing directly to `main`). For a solo dev
+> with the PR habit, A is enough.
 
 ---
 
-## 4. Test credentials: `.env.local` vs GitHub Actions secrets
+## 4. Step-by-step: set up branch protection (Option A)
+
+**One-time GitHub setup:**
+
+1. Push at least one PR first so GitHub "knows" the check name. If you've never
+   opened a PR, do the branch step below once; the **"Playwright E2E"** check
+   appears in the list only after it has run against a PR at least once.
+2. Go to **GitHub → your repo → Settings → Branches**.
+3. Under **Branch protection rules**, click **Add branch ruleset** (or *Add
+   rule* in the classic UI).
+4. **Branch name pattern:** `main`.
+5. Tick these:
+   - ✅ **Require a pull request before merging**
+     - (solo dev) set *Required approvals* to **0** — you don't need to approve
+       your own PRs, you just need the checks to pass.
+   - ✅ **Require status checks to pass before merging**
+     - In the search box, add **`Playwright E2E`** (the job `name:` from
+       `.github/workflows/e2e.yml`).
+     - ✅ (optional) **Require branches to be up to date before merging.**
+   - ✅ (optional) **Do not allow bypassing the above settings** — if you leave
+     this *unticked*, you as admin can still force-merge in an emergency.
+6. **Save changes.**
+
+**Your day-to-day workflow after that:**
+
+```bash
+# 1. start work on a branch (never commit straight to main)
+git checkout -b feature/my-change
+
+# 2. commit + push
+git add -A
+git commit -m "..."
+git push -u origin feature/my-change
+
+# 3. open a PR on GitHub (the link is printed by the push, or use the GitHub UI)
+#    → GitHub runs the E2E workflow automatically
+#    → Vercel posts a Preview URL on the PR — click it to test the change live
+
+# 4. when the E2E check is green, click "Merge pull request"
+#    → merging into main triggers the Vercel PRODUCTION deploy
+```
+
+That's it. If E2E is red, the **Merge** button is disabled until you fix it —
+production stays safe.
+
+---
+
+## 5. (Optional) Step-by-step: gate Vercel on CI (Option B)
+
+Only if you want the extra technical block. Two common ways:
+
+**B1 — Ignored Build Step (simplest Vercel-side option):**
+1. Vercel → Project → **Settings → Git → Ignored Build Step**.
+2. Set it to a command that **exits 0 to build, non-zero to skip**. Vercel only
+   proceeds when the command "passes". You can point it at a check of the commit
+   status via the GitHub API, or a simple guard script committed to the repo.
+
+**B2 — Deploy from GitHub Actions (full control):**
+1. Turn **off** Vercel's automatic Git deployments for production (Settings →
+   Git), or restrict it to previews.
+2. Add a deploy job to the workflow that runs **after** the E2E job and only on
+   `main`, using the Vercel CLI:
+   ```yaml
+   deploy:
+     needs: e2e          # ← only runs if E2E passed
+     if: github.ref == 'refs/heads/main'
+     runs-on: ubuntu-latest
+     steps:
+       - uses: actions/checkout@v4
+       - run: npm i -g vercel
+       - run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+       - run: vercel build --prod --token=$VERCEL_TOKEN
+       - run: vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+     env:
+       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+   ```
+   This makes production deploys literally depend on green E2E — but it's more to
+   maintain, which is why Option A is the recommended starting point.
+
+**Escape hatch (either option):** if a bad deploy ever slips through, use
+Vercel → Deployments → **Instant Rollback** to re-promote the last good build in
+seconds (no rebuild needed).
+
+---
+
+## 6. Test credentials: `.env.local` vs GitHub Actions secrets
 
 This trips people up, so to be explicit:
 
@@ -143,11 +230,13 @@ This trips people up, so to be explicit:
 
 ---
 
-## 5. Related docs
+## 7. Related docs
 
 - [`docs/tests/CI_SETUP.md`](tests/CI_SETUP.md) — how to configure the CI secrets
   and the dedicated **test** Supabase project.
 - [`docs/tests/E2E_TESTING.md`](tests/E2E_TESTING.md) — the test suites, the
   tracking process, and the change log.
+- [`docs/TECH_STACK.md`](TECH_STACK.md) — framework/library versions, update
+  urgency, and dependency health.
 - [`GO-LIVE.md`](../GO-LIVE.md) — production launch checklist (env vars, Stripe
   live mode, domain).
