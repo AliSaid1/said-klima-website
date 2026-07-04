@@ -334,7 +334,9 @@ export async function POST(request: NextRequest) {
           await supabase.from('zahlungen').insert({
             bestellung_id: bestellungId,
             anbieter: 'stripe',
-            status: isPaid ? 'erfasst' : 'ausstehend',
+            // 'initiiert' = payment initiated but not yet captured (delayed/bank transfer).
+            // Must be a valid zahlungs_status enum value — 'ausstehend' is NOT one.
+            status: isPaid ? 'erfasst' : 'initiiert',
             betrag_brutto: (session.amount_total || 0) / 100,
             waehrung: session.currency || 'EUR',
             stripe_payment_intent_id: session.payment_intent as string,

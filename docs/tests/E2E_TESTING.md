@@ -263,7 +263,7 @@ Run on Chromium against the **seeded test project** with all secrets
 the customer `kunde` user is auto-seeded):
 
 ```
-69 passed, 2 skipped
+75 passed, 2 skipped
   - passed: 11 public smoke + home→shop nav
   - passed:  3 security (anon API 401, bad admin login, 404)
   - passed:  3 admin dashboard (login, section nav, auth redirect)
@@ -276,12 +276,13 @@ the customer `kunde` user is auto-seeded):
   - passed:  5 auth (login render, wrong creds, seeded login, register render,
              password mismatch)
   - passed:  1 checkout-ui (Zur Kasse → Stripe session id)
-  - passed:  4 checkout-pricing (client price ignored, discount, variant, unknown variant)
-  - passed: 10 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed,
+  - passed:  7 checkout-pricing (client price ignored, discount, variant, unknown variant,
+             shipping below threshold, shipping waived above threshold, multi-item sum)
+  - passed: 11 stripe-webhook (missing-sig, forged-sig, unknown-event, async_failed,
              pi_failed+event, pi_failed no-meta, expired→storniert, expired no-op on paid,
-             async_failed no-meta, async_failed idempotent)
-  - passed:  7 checkout-validation (empty cart, >50 items, bad UUID, bad qty,
-             qty>999, non-integer qty, unknown article)
+             async_failed no-meta, async_failed idempotent, completed success path)
+  - passed:  9 checkout-validation (empty cart, >50 items, bad UUID, bad qty,
+             qty>999, non-integer qty, unknown article, inactive article, oversized body 413)
   - skipped: 1 auth sign-up (opt-in, RUN_SIGNUP_E2E unset)
   - skipped: 1 upload (opt-in, RUN_UPLOAD_E2E unset)
 ```
@@ -430,15 +431,27 @@ Status legend: ✅ automated & asserting an end state · ⚠️ partial / up-to-
 | 2026-07   | Auth                | Customer **registration** flow: form render, client-side password-mismatch, successful sign-up + cleanup (**opt-in** `RUN_SIGNUP_E2E` — Supabase email rate limit) | `tests/auth.spec.ts`             | ✅     |
 | 2026-07   | Auth helpers        | Added `supabaseConfigured`, `serviceRoleConfigured`, `deleteAuthUserByEmail`, customer-cred exports          | `tests/helpers/auth.ts`          | ✅     |
 | 2026-07   | Test config         | `playwright.config.ts` now auto-loads `.env.local` (dotenv) so local gated tests pick up credentials         | `playwright.config.ts`           | ✅     |
+| 2026-07   | Test reliability    | Local runs now match CI: `test:e2e` sets `DISABLE_RATE_LIMIT=1`; Playwright uses `workers: 1` + `retries: 1` locally (was parallel/0) to remove 429 cascades & state races | `package.json`, `playwright.config.ts` | ✅ |
+| 2026-07   | Stripe webhook      | **Success path** `checkout.session.completed` for a REAL session (placed via `/api/checkout`) → order leaves `offen`, a `zahlungen` row + a `checkout.session.completed` `zahlungsvorgaenge` event are recorded | `tests/stripe-webhook.spec.ts`   | ✅     |
+| 2026-07   | Webhook bug fix     | Delayed/bank-transfer sessions inserted `zahlungen.status = 'ausstehend'`, which is **not** a valid `zahlungs_status` enum value → insert silently failed. Fixed to `'initiiert'` | `app/api/webhooks/stripe/route.ts` | ✅   |
+| 2026-07   | Checkout validation | Inactive article (`aktiv = false`) → `400` `/ist nicht verfügbar/i`                                       | `tests/checkout-validation.spec.ts` | ✅  |
+| 2026-07   | Checkout validation | Oversized request body (> size guard) → `413`                                                            | `tests/checkout-validation.spec.ts` | ✅  |
+| 2026-07   | Checkout pricing    | Shipping fee added below the free-shipping threshold (`versandkosten` / fallback 5 €)                    | `tests/checkout-pricing.spec.ts` | ✅     |
+| 2026-07   | Checkout pricing    | Shipping waived at/above the `versandkostenlos_ab` threshold (fallback 500 €)                            | `tests/checkout-pricing.spec.ts` | ✅     |
+| 2026-07   | Checkout pricing    | Multi-item cart total is the DB-derived sum of all line items                                            | `tests/checkout-pricing.spec.ts` | ✅     |
+| 2026-07   | Seed fixtures       | Added inactive article (`…000b`, 500 €) + cheap article (`…000c`, 99 €) with stock rows                  | `supabase/migrations/004_seed_testdaten.sql` | ✅ |
 
 ### 8.3 Known coverage gaps (accepted)
 
-- ⚠️ **Stripe success path** (`checkout.session.completed` /
-  `async_payment_succeeded` → order `bezahlt`): the handler calls the real
-  `stripe.checkout.sessions.retrieve`, so synthetic events can't drive it.
-  Covered up-to-Stripe by `checkout-ui.spec.ts`; a true paid-state assertion
-  needs `stripe listen` webhook forwarding (not in standard CI). **This is the
-  only payment branch without an automated end-state assertion.**
+- ✅ **Stripe success path** (`checkout.session.completed`): now covered by
+  `stripe-webhook.spec.ts` — a real session is created via `/api/checkout`, the
+  signed completed event drives the order off `offen` and records the payment +
+  event. A freshly-created session is still unpaid, so the asserted end-state is
+  `warten_auf_zahlung`/`bezahlt` (not strictly `bezahlt`). A true forced-`bezahlt`
+  assertion still needs `stripe listen` forwarding (not in standard CI).
+- ⚠️ **`async_payment_succeeded`** end-state (`bezahlt`): the handler also calls
+  `stripe.checkout.sessions.retrieve`, so it can't be driven to a paid state by
+  synthetic events; same limitation as above.
 - ⛔ **Rate limiting (429)** — better as a targeted unit test (see §6).
 - ⛔ **Stock/`lagerbestand` check at checkout** — not enforced at checkout by
   design, so there's nothing to assert.

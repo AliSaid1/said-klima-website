@@ -15,6 +15,8 @@ import { serviceConfigured } from './helpers/stripe';
  * article" path — arbitrary IDs must never create a Checkout Session.
  */
 const NONEXISTENT_UUID = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+/** Seeded but deaktiviert (aktiv=false) article — must be rejected. */
+const INACTIVE_UUID = 'a1000000-0000-4000-8000-00000000000b';
 
 async function postCheckout(request: any, body: unknown) {
   return request.post(`${BASE_URL}/api/checkout`, {
@@ -84,5 +86,22 @@ test.describe('Checkout validation', () => {
     });
     expect(res.status()).toBe(400);
     expect((await res.json()).error).toMatch(/nicht gefunden/i);
+  });
+
+  test('rejects a deaktiviert (inactive) article (400)', async ({ request }) => {
+    const res = await postCheckout(request, {
+      items: [{ artikel_id: INACTIVE_UUID, menge: 1 }],
+    });
+    expect(res.status()).toBe(400);
+    expect((await res.json()).error).toMatch(/nicht verfügbar/i);
+  });
+
+  test('rejects an oversized request body (413)', async ({ request }) => {
+    // Body > 16 KB is refused up front (before JSON parsing) to bound work.
+    const res = await postCheckout(request, {
+      items: [{ artikel_id: NONEXISTENT_UUID, menge: 1 }],
+      pad: 'x'.repeat(20_000),
+    });
+    expect(res.status()).toBe(413);
   });
 });
