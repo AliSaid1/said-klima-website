@@ -124,9 +124,9 @@ export default function CartPage() {
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* ── Cart Items ── */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-3 min-w-0">
           {items.map((item) => {
             const displayPrice = item.rabattpreis ?? item.preis_brutto;
             const cartKey = `${item.artikel_id}|${item.variant_id ?? ''}`;
@@ -251,7 +251,7 @@ export default function CartPage() {
         </div>
 
         {/* ── Order Summary ── */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 min-w-0">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sticky top-24">
             <h2 className="font-outfit font-bold text-slate-900 text-lg mb-5">Zusammenfassung</h2>
 

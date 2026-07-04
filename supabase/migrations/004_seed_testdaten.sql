@@ -42,7 +42,11 @@ ON CONFLICT (artikelnummer) DO NOTHING;
 -- variant article (varianten JSONB with preis_aufschlag surcharges).
 INSERT INTO artikel (id, artikelnummer, titel, beschreibung, marke_id, kategorie_id, preis_brutto, rabattpreis, varianten, steuersatz, aktiv, slug) VALUES
   ('a1000000-0000-4000-8000-000000000009'::uuid, 'E2E-DISCOUNT-001', 'E2E Rabatt Testgerät', 'Testartikel mit Rabattpreis für E2E-Preisintegritätstests.', 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 1000.00, 750.00, '[]'::jsonb, 19.00, true, 'e2e-rabatt-testgeraet'),
-  ('a1000000-0000-4000-8000-00000000000a'::uuid, 'E2E-VARIANT-001', 'E2E Varianten Testgerät', 'Testartikel mit Varianten-Aufschlägen für E2E-Preisintegritätstests.', 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 1000.00, NULL, '[{"name":"5 kW","preis_aufschlag":200},{"name":"7 kW","preis_aufschlag":500}]'::jsonb, 19.00, true, 'e2e-varianten-testgeraet')
+  ('a1000000-0000-4000-8000-00000000000a'::uuid, 'E2E-VARIANT-001', 'E2E Varianten Testgerät', 'Testartikel mit Varianten-Aufschlägen für E2E-Preisintegritätstests.', 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 1000.00, NULL, '[{"name":"5 kW","preis_aufschlag":200},{"name":"7 kW","preis_aufschlag":500}]'::jsonb, 19.00, true, 'e2e-varianten-testgeraet'),
+  -- Inactive article: checkout must reject it with 400 "nicht verfügbar".
+  ('a1000000-0000-4000-8000-00000000000b'::uuid, 'E2E-INACTIVE-001', 'E2E Inaktiv Testgerät', 'Deaktivierter Testartikel — darf nicht bestellbar sein.', 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 500.00, NULL, '[]'::jsonb, 19.00, false, 'e2e-inaktiv-testgeraet'),
+  -- Cheap article (< versandkostenlos_ab 500) so shipping is charged, not waived.
+  ('a1000000-0000-4000-8000-00000000000c'::uuid, 'E2E-CHEAP-001', 'E2E Günstig Testgerät', 'Günstiger Testartikel für Versandkosten-Tests.', 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid, 99.00, NULL, '[]'::jsonb, 19.00, true, 'e2e-guenstig-testgeraet')
 ON CONFLICT (artikelnummer) DO NOTHING;
 
 -- ============================================
@@ -58,7 +62,9 @@ INSERT INTO lagerbestaende (artikel_id, bestand, mindestbestand) VALUES
   ('a1000000-0000-4000-8000-000000000007'::uuid, 3, 2),
   ('a1000000-0000-4000-8000-000000000008'::uuid, 12, 2),
   ('a1000000-0000-4000-8000-000000000009'::uuid, 20, 2),
-  ('a1000000-0000-4000-8000-00000000000a'::uuid, 20, 2)
+  ('a1000000-0000-4000-8000-00000000000a'::uuid, 20, 2),
+  ('a1000000-0000-4000-8000-00000000000b'::uuid, 20, 2),
+  ('a1000000-0000-4000-8000-00000000000c'::uuid, 20, 2)
 ON CONFLICT (artikel_id) DO NOTHING;
 
 -- ============================================

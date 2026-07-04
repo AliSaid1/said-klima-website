@@ -15,6 +15,20 @@ import { BASE_URL } from './helpers/auth';
  */
 
 /**
+ * Generates a random private-range IPv4 address.
+ *
+ * The contact endpoint rate-limits by client IP (5 requests / 10 min), checking
+ * the limit *before* body validation. Without a unique IP per request, the
+ * validation tests would share one bucket — and because the limiter can persist
+ * in Redis across CI runs, frequent pushes would trip the limit and return 429
+ * instead of the expected 400. A fresh IP per request keeps each test isolated.
+ */
+function randomIp(): string {
+  const octet = () => Math.floor(Math.random() * 254) + 1;
+  return `10.${octet()}.${octet()}.${octet()}`;
+}
+
+/**
  * POSTs a JSON body to the contact endpoint.
  *
  * @param request - Playwright's request fixture (bypasses the browser).
@@ -23,7 +37,10 @@ import { BASE_URL } from './helpers/auth';
  */
 async function postContact(request: APIRequestContext, body: unknown) {
   return request.post(`${BASE_URL}/api/contact`, {
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-forwarded-for': randomIp(),
+    },
     data: typeof body === 'string' ? body : JSON.stringify(body),
   });
 }

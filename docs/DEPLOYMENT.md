@@ -288,26 +288,102 @@ seconds (no rebuild needed).
 
 ---
 
-## 6. Test credentials: `.env.local` vs GitHub Actions secrets
+## 6. Staging environment (`develop`)
 
-This trips people up, so to be explicit:
+`develop` deploys to a Vercel **Preview** that acts as your always-on staging
+site. It is deliberately wired to **test** infrastructure so you can click
+around safely without touching real customers or money.
 
-| Where tests run | Where creds come from | What you must do |
-| --------------- | --------------------- | ---------------- |
-| **Locally** (`npm run test`) | `.env.local` in the repo root, auto-loaded by `playwright.config.ts` (via `dotenv`). | Put `TEST_EMAIL` / `TEST_PASSWORD` (and the rest) in `.env.local`. ✅ Already done. |
-| **CI** (GitHub Actions) | GitHub **repository secrets** — `.env.local` is git-ignored and never reaches CI. | Add the same values under **Settings → Secrets and variables → Actions → Secrets** (not *Variables*). |
+| Aspect | Staging (`develop` / Preview) | Production (`main`) |
+| --- | --- | --- |
+| URL | `https://staging.kks-said.de` (custom) + the auto `…-git-develop-…vercel.app` | `https://www.kks-said.de` |
+| Supabase | **TEST** project (the same one CI seeds) | production project |
+| Stripe | **test-mode** keys | live keys (after go-live) |
+| Data shown | the seeded E2E catalog (no images) | the current catalog |
 
-- `.env.local` is in `.gitignore`, so it is *never* pushed — CI genuinely
-  cannot see it. That's why the values must **also** live as Actions secrets.
-- The workflow has a **"Verify required secrets"** step that fails the run early
-  with a clear message if `TEST_EMAIL` / `TEST_PASSWORD` (and the Supabase keys)
-  are missing — so a missing secret shows up as an obvious CI error, not a
-  mysterious skipped test.
-- Never commit real credentials to the repo or to any tracked file.
+> **Note on "production" data today:** the production Supabase project currently
+> holds **placeholder/test catalog data**, not real customer products — which is
+> why it is paired with **test-mode** Stripe keys. At go-live you'll replace the
+> placeholder products with the real catalog and switch Stripe to live keys.
+> So production data isn't precious *yet*, but its **schema still backs the live
+> site**, so the "never seed against `.env.local`" rule below still applies.
+
+**Environment variables (Vercel → Settings → Environment Variables):**
+- Every var the app needs is added a **second time scoped to `Preview` only**
+  (Production values are untouched). Confirm each staging var shows the
+  **Preview** tag — never tick Production for a test value, or the live site
+  would talk to the test database.
+- Use **test** values for Preview: test Supabase URL/anon/service-role key and
+  Stripe `pk_test_…` / `sk_test_…`.
+- Set the Preview **`NEXT_PUBLIC_APP_URL`** to `https://staging.kks-said.de`
+  (fixes checkout redirects + email links on staging).
+- After changing any Preview var, **redeploy `develop`** — env changes don't
+  rebuild past deployments.
+
+**Custom domain:** `staging.kks-said.de` is assigned to the Preview environment
+and tracks `develop` (Vercel → Settings → Domains). It needs a DNS record
+(usually a `CNAME` → `cname.vercel-dns.com`) and a few minutes for SSL; until
+then use the auto `…-git-develop-…vercel.app` URL. A dedicated staging domain is
+optional — the auto URL works fine on its own.
+
+**Stripe webhooks on staging:** the production webhook signing secret is
+live-mode and bound to the production URL, so it can't verify test-mode events.
+Either accept that webhook-completion steps won't verify on staging, or add a
+dedicated **test-mode** webhook endpoint in Stripe pointing at
+`https://staging.kks-said.de/api/webhooks/stripe` and use *its* signing secret
+for the Preview `STRIPE_WEBHOOK_SECRET`.
+
+**Catalog on staging:** staging (Vercel Preview) uses the same TEST Supabase
+project that CI wipes and re-seeds on every `develop`/`main` push
+(`npm run seed:test`). So the products you see on staging are always the
+**seed catalog** from `supabase/migrations/004_seed_testdaten.sql` — extend that
+seed if you want richer staging/test data. A one-off copy of the production
+catalog into this project would not persist (the next push re-seeds it). For a
+**persistent** real-looking staging catalog you would need a **dedicated staging
+Supabase project** separate from the CI test project.
 
 ---
 
-## 7. Related docs
+## 7. Test credentials & running E2E locally
+
+> ⚠️ **This machine's `.env.local` points at the PRODUCTION Supabase project.**
+> The Playwright suite creates/deletes users, orders, and addresses, and
+> `npm run seed:test` **drops and recreates the whole `public` schema**. The
+> production DB currently holds only placeholder catalog data, but its schema
+> still backs the live site — so wiping it would take the site down. **Never
+> run E2E or the seeder against `.env.local`.** Use the dedicated **TEST**
+> project via `.env.e2e.local` instead.
+
+| Where tests run | Where creds come from | What you must do |
+| --------------- | --------------------- | ---------------- |
+| **Local E2E** (`npm run test:e2e`) | **`.env.e2e.local`** (git-ignored), loaded *first* by `playwright.config.ts` so it overrides `.env.local` for the runner **and** the spawned dev server. | Copy `.env.e2e.local.example` → `.env.e2e.local` and fill in your **TEST** project + Stripe test keys. |
+| **CI** (GitHub Actions) | GitHub **repository secrets** (the same test project). `.env*` files never reach CI. | Add the values under **Settings → Secrets and variables → Actions → Secrets** (not *Variables*). |
+| **Local dev** (`npm run dev`) | `.env.local` (production) | Left as-is for developing against real data. |
+
+**One-time local E2E setup:**
+```bash
+# 1. create your test-env file from the template and fill in TEST-project values
+cp .env.e2e.local.example .env.e2e.local
+
+# 2. seed the TEST database (safe: loads ONLY .env.e2e.local, never .env.local)
+npm run seed:test:e2e
+
+# 3. run the suite (uses port 3100 + test creds; TLS check relaxed for local intercept)
+npm run test:e2e
+```
+
+Notes:
+- `test:e2e` runs the dev server on **port 3100**, so it can't accidentally
+  reuse a production dev server you have open on 3000.
+- `NODE_TLS_REJECT_UNAUTHORIZED=0` is set only for these local scripts to work
+  around this machine's TLS interception; it is never used in CI or production.
+- Leave Upstash vars **unset** in `.env.e2e.local` so the rate limiter uses its
+  in-memory fallback (avoids cross-run 429 flakiness).
+- Never commit real credentials to the repo or any tracked file.
+
+---
+
+## 8. Related docs
 
 - [`docs/tests/CI_SETUP.md`](tests/CI_SETUP.md) — how to configure the CI secrets
   and the dedicated **test** Supabase project.

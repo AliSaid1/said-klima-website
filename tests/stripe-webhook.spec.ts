@@ -330,4 +330,89 @@ test.describe('Stripe webhook', () => {
       await deleteOrder(db, order.id);
     }
   });
+
+  /**
+   * The success path: a signed checkout.session.completed for a REAL session
+   * (created via /api/checkout) must transition the order off 'offen' and record
+   * a payment + a 'checkout.session.completed' payment event. The handler fetches
+   * the live session from Stripe, so this needs a real session id — hence we place
+   * an order first. A freshly-created session is still unpaid, so the order lands
+   * in 'warten_auf_zahlung' (delayed-payment branch).
+   */
+  test('checkout.session.completed persists the order and logs the payment event', async ({ request }) => {
+    test.skip(
+      !stripeConfigured() || !serviceConfigured(),
+      'Stripe secrets / Supabase service role not set',
+    );
+
+    const db = adminClient();
+    const CHEAP_ID = 'a1000000-0000-4000-8000-00000000000c';
+
+    // 1) Create a real Stripe Checkout Session + order via the checkout route.
+    const checkoutRes = await request.post(`${BASE_URL}/api/checkout`, {
+      headers: { 'content-type': 'application/json' },
+      data: JSON.stringify({
+        items: [{ artikel_id: CHEAP_ID, menge: 1 }],
+        kunden_email: 'e2e-webhook@said-klima.de',
+      }),
+    });
+    expect(checkoutRes.status()).toBe(200);
+    const { session_id, bestellung_id } = await checkoutRes.json();
+    expect(session_id).toBeTruthy();
+    expect(bestellung_id).toBeTruthy();
+
+    try {
+      // 2) Fire a signed completed event referencing that real session.
+      const payload = checkoutEvent('checkout.session.completed', {
+        id: session_id,
+        metadata: { bestellung_id, bestellnummer: 'BS-E2E' },
+      });
+      const res = await request.post(`${BASE_URL}/api/webhooks/stripe`, {
+        headers: {
+          'content-type': 'application/json',
+          'stripe-signature': signWebhook(payload),
+        },
+        data: payload,
+      });
+      expect(res.ok()).toBeTruthy();
+
+      // 3) The order must leave 'offen' (unpaid → warten_auf_zahlung, paid → bezahlt).
+      await expect
+        .poll(async () => {
+          const { data } = await db
+            .from('bestellungen')
+            .select('status')
+            .eq('id', bestellung_id)
+            .single();
+          return data?.status;
+        }, { timeout: 15000 })
+        .not.toBe('offen');
+
+      const { data: order } = await db
+        .from('bestellungen')
+        .select('status')
+        .eq('id', bestellung_id)
+        .single();
+      expect(['warten_auf_zahlung', 'bezahlt']).toContain(order?.status);
+
+      // 4) A payment row + a completed payment event were recorded.
+      const { data: zahlungen } = await db
+        .from('zahlungen')
+        .select('id')
+        .eq('bestellung_id', bestellung_id);
+      const ids = (zahlungen ?? []).map((z: { id: string }) => z.id);
+      expect(ids.length).toBeGreaterThan(0);
+
+      const { data: events } = await db
+        .from('zahlungsvorgaenge')
+        .select('ereignis')
+        .in('zahlung_id', ids)
+        .eq('ereignis', 'checkout.session.completed');
+      expect((events ?? []).length).toBeGreaterThan(0);
+    } finally {
+      await deletePayments(db, bestellung_id);
+      await db.from('bestellpositionen').delete().eq('bestellung_id', bestellung_id);
+      await deleteOrder(db, bestellung_id);
+    }
+  });
 });
