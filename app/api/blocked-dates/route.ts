@@ -1,6 +1,26 @@
+/**
+ * Blocked booking dates (gesperrte_tage) API routes.
+ *
+ * Lists and manages dates that should be excluded from booking availability,
+ * optionally globally or for a specific technician. Touches the Supabase
+ * `gesperrte_tage` table and reads related `techniker` data.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+/**
+ * GET /api/blocked-dates
+ *
+ * Public endpoint that lists blocked booking dates (gesperrte_tage), including
+ * technician names when the block is technician-specific.
+ *
+ * Returns `200` with `{ data }` ordered by date, or `500` when Supabase returns
+ * a query error.
+ *
+ * Side effects: none; this route only reads `gesperrte_tage` and `techniker`.
+ *
+ * @returns A NextResponse containing blocked dates or an error.
+ */
 // GET /api/blocked-dates
 export async function GET() {
   const supabase = await createClient();
@@ -13,6 +33,21 @@ export async function GET() {
   return NextResponse.json({ data });
 }
 
+/**
+ * POST /api/blocked-dates
+ *
+ * Authenticated-user endpoint that creates a blocked booking date. Reads JSON
+ * body fields `datum` (date), optional `grund` (reason), and optional
+ * `techniker_id` for technician-specific blocking.
+ *
+ * Returns `201` with `{ data }` for the inserted `gesperrte_tage` row.
+ * Returns `401` for anonymous callers and `500` for Supabase insert errors.
+ *
+ * Side effects: inserts a row into `gesperrte_tage`.
+ *
+ * @param request - The incoming NextRequest containing the blocked-date JSON body.
+ * @returns A NextResponse with the created blocked date or an error.
+ */
 // POST /api/blocked-dates
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -34,6 +69,20 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ data }, { status: 201 });
 }
 
+/**
+ * DELETE /api/blocked-dates
+ *
+ * Authenticated-user endpoint that deletes a blocked booking date. Reads query
+ * param `id` for the `gesperrte_tage` row to remove.
+ *
+ * Returns `200` with `{ success: true }`. Returns `400` when `id` is missing,
+ * `401` for anonymous callers, and `500` for Supabase delete errors.
+ *
+ * Side effects: deletes one row from `gesperrte_tage`.
+ *
+ * @param request - The incoming NextRequest containing the blocked-date ID query parameter.
+ * @returns A NextResponse confirming deletion or describing an error.
+ */
 // DELETE /api/blocked-dates
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
@@ -48,4 +97,3 @@ export async function DELETE(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
-

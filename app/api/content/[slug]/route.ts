@@ -1,8 +1,31 @@
+/**
+ * Content page detail API routes.
+ *
+ * Reads public legal/CMS pages (Rechtstexte) by slug and provides admin-only
+ * updates with version history. Touches Supabase `rechtstexte`,
+ * `inhalt_versionen`, and `benutzer` tables.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sanitizeHtml, sanitizeText } from '@/lib/sanitize';
 
+/**
+ * GET /api/content/[slug]
+ *
+ * Public endpoint that fetches one legal/CMS page (Rechtstext) by route param
+ * `slug` and returns recent version history from `inhalt_versionen`.
+ *
+ * Returns `200` with `{ data, versions }`, where `data.published` normalizes
+ * the German `veröffentlicht` column for clients. Returns `404` when the page
+ * is not found.
+ *
+ * Side effects: none; reads `rechtstexte` and up to 20 `inhalt_versionen` rows.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the content slug parameter.
+ * @returns A NextResponse containing the content page, versions, or an error.
+ */
 // GET /api/content/[slug] — Get content page + version history (public)
 export async function GET(
   request: NextRequest,
@@ -33,6 +56,25 @@ export async function GET(
   return NextResponse.json({ data: normalized, versions: versions || [] });
 }
 
+/**
+ * PUT /api/content/[slug]
+ *
+ * Admin-only endpoint that updates one legal/CMS page (Rechtstext). Reads route
+ * param `slug` and JSON body fields `titel`, `content_html`, `published`, or
+ * `veröffentlicht`. HTML and text fields are sanitized before storage.
+ *
+ * Returns `200` with `{ data }`, including normalized `published`. Returns
+ * `401` for anonymous callers, `403` for non-admin users, `404` when the page
+ * is not found, and `500` for Supabase update errors.
+ *
+ * Side effects: verifies admin role via `benutzer`, optionally inserts a
+ * version snapshot into `inhalt_versionen`, updates `rechtstexte`, and sets
+ * `aktualisiert_am`.
+ *
+ * @param request - The incoming NextRequest containing the content update JSON body.
+ * @param context - Route context containing the content slug parameter.
+ * @returns A NextResponse with the updated content page or an error.
+ */
 // PUT /api/content/[slug] — Update content page (admin only, creates version)
 export async function PUT(
   request: NextRequest,

@@ -1,8 +1,34 @@
+/**
+ * Contact request API route.
+ *
+ * Accepts public contact and inquiry submissions, sanitizes user-provided
+ * fields, rate-limits submissions by IP address, and sends notification emails
+ * through `lib/email`. This route does not write to Supabase tables.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit, rateLimitHeaders } from '@/lib/rate-limit';
 import { sanitizeText } from '@/lib/sanitize';
 import { sendContactEmails } from '@/lib/email';
 
+/**
+ * POST /api/contact
+ *
+ * Public endpoint for contact form submissions. Reads JSON body fields
+ * `vorname`, `nachname`, and `email` as required fields, plus optional
+ * `telefon`, `firma`, `interesse`, `produktName`, `raeume`, `flaeche`,
+ * `standort`, and `nachricht`.
+ *
+ * Returns `200` with `{ success: true, message }` after emails are sent.
+ * Returns `400` for invalid JSON, missing required fields, or invalid email
+ * format; `429` when the IP exceeds 5 submissions per 10 minutes; and `500`
+ * when email sending fails or an unexpected error occurs.
+ *
+ * Side effects: applies rate limiting via `rateLimit`, sanitizes text fields,
+ * and sends contact emails through `sendContactEmails`.
+ *
+ * @param request - The incoming NextRequest containing contact form JSON.
+ * @returns A NextResponse confirming submission or describing an error.
+ */
 // POST /api/contact — Handle contact form / Anfrage submissions
 export async function POST(request: NextRequest) {
   // ── Rate limit: 5 submissions per 10 minutes per IP ─────
@@ -82,4 +108,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

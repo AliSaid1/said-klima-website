@@ -1,3 +1,10 @@
+/**
+ * Booking (Buchung) collection API routes.
+ *
+ * Lists and creates bookings for service appointments. Touches Supabase tables
+ * `buchungen`, `buchung_dienstleistungen`, `dienstleistungen`, `techniker`,
+ * and `benutzer`; sends booking emails through `lib/email`.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -5,6 +12,27 @@ import { sendBookingConfirmation, sendNewBookingNotification } from '@/lib/email
 import { apiServerError } from '@/lib/api-response';
 import { sanitizeText } from '@/lib/sanitize';
 
+/**
+ * GET /api/bookings
+ *
+ * Lists bookings (Buchungen) with access depending on authentication. Admin
+ * users read all bookings; authenticated non-admin users read only rows with
+ * `benutzer_id` equal to their user ID; anonymous callers must provide query
+ * param `email` and are filtered by `kontakt_email`.
+ *
+ * Reads optional query params `status`, `von` (planned from lower bound),
+ * `bis` (planned from upper bound), and `email` for anonymous lookup.
+ *
+ * Returns `200` with `{ data }`. Returns `401` when an anonymous caller omits
+ * `email`, and `500` via `apiServerError` when both full and fallback Supabase
+ * queries fail.
+ *
+ * Side effects: reads `benutzer` for role detection and reads booking-related
+ * tables; no writes, emails, cache revalidation, or rate limiting.
+ *
+ * @param request - The incoming NextRequest containing booking filter query parameters.
+ * @returns A NextResponse containing matching bookings or an error.
+ */
 // GET /api/bookings
 // - Admin      → all bookings (with filters)
 // - Auth user  → only their own (benutzer_id = user.id) — email param ignored
@@ -90,6 +118,28 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ data });
 }
 
+/**
+ * POST /api/bookings
+ *
+ * Public or authenticated endpoint that creates a booking (Buchung). Reads a
+ * JSON body with `dienstleistung_ids` or legacy `dienstleistung_id`, required
+ * `geplant_von` and `geplant_bis`, optional `techniker_id`, `adresse_id`,
+ * `hinweise`, and optional `kontakt` fields (`vorname`, `nachname`, `email`,
+ * `telefon`). When authenticated, the booking uses the current user ID and
+ * ignores any client-supplied `benutzer_id`.
+ *
+ * Returns `201` with `{ data }`, including a generated `booking_number`.
+ * Returns `400` when no service is supplied or planned times are missing,
+ * `413` when the request body is larger than 32 KiB, and `500` via
+ * `apiServerError` for Supabase insert failures.
+ *
+ * Side effects: inserts into `buchungen`, inserts selected services into
+ * `buchung_dienstleistungen`, reads `dienstleistungen` for email labels, and
+ * asynchronously sends customer/admin booking emails through `lib/email`.
+ *
+ * @param request - The incoming NextRequest containing the booking JSON body.
+ * @returns A NextResponse with the created booking data or an error.
+ */
 // POST /api/bookings — Create a new booking (public or authenticated)
 export async function POST(request: NextRequest) {
   const admin = createAdminClient();

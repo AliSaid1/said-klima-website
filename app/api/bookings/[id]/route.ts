@@ -1,8 +1,32 @@
+/**
+ * Booking (Buchung) detail API routes.
+ *
+ * Reads, updates, and soft-cancels individual bookings in the Supabase
+ * `buchungen` table, with related `dienstleistungen` (services), `techniker`,
+ * and `benutzer` data. Status changes can trigger booking email notifications.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendBookingStatusEmail } from '@/lib/email';
 
+/**
+ * GET /api/bookings/[id]
+ *
+ * Authenticated-user endpoint that fetches one booking (Buchung) by route param
+ * `id`, including related service (Dienstleistung), technician, and user
+ * (Benutzer) details.
+ *
+ * Returns `200` with `{ data }`. Returns `401` for anonymous callers and `404`
+ * when the booking cannot be found.
+ *
+ * Side effects: none; reads from `buchungen`, `dienstleistungen`, `techniker`,
+ * and `benutzer`.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the booking ID parameter.
+ * @returns A NextResponse containing the booking or an error.
+ */
 // GET /api/bookings/[id]
 export async function GET(
   request: NextRequest,
@@ -35,6 +59,26 @@ export async function GET(
   return NextResponse.json({ data });
 }
 
+/**
+ * PUT /api/bookings/[id]
+ *
+ * Admin-only endpoint that updates one booking (Buchung). Reads route param
+ * `id` and JSON body fields `status`, `geplant_von`, `geplant_bis`,
+ * `techniker_id`, and `hinweise`. Valid statuses are `ausstehend`,
+ * `bestaetigt`, `abgeschlossen`, `abgesagt`, and `nicht_erschienen`.
+ *
+ * Returns `200` with `{ data }` for the updated row. Returns `400` for an
+ * invalid status, `401` for anonymous callers, `403` for non-admin users,
+ * `404` when the booking does not exist, and `500` for Supabase update errors.
+ *
+ * Side effects: reads `benutzer` to verify admin role, reads the current
+ * booking, updates `buchungen`, sets `aktualisiert_am`, and asynchronously
+ * sends a customer status email through `lib/email` when the status changes.
+ *
+ * @param request - The incoming NextRequest containing the booking update JSON body.
+ * @param context - Route context containing the booking ID parameter.
+ * @returns A NextResponse with the updated booking or an error.
+ */
 // PUT /api/bookings/[id] — Update booking (admin: status change + email notifications)
 export async function PUT(
   request: NextRequest,
@@ -132,6 +176,21 @@ export async function PUT(
   return NextResponse.json({ data });
 }
 
+/**
+ * DELETE /api/bookings/[id]
+ *
+ * Authenticated-user endpoint that soft-cancels a booking (Buchung) by setting
+ * its status to `abgesagt`. Reads route param `id`.
+ *
+ * Returns `200` with `{ success: true }`. Returns `401` for anonymous callers
+ * and `500` for Supabase update errors.
+ *
+ * Side effects: updates `buchungen.status` and `buchungen.aktualisiert_am`.
+ *
+ * @param request - The incoming NextRequest.
+ * @param context - Route context containing the booking ID parameter.
+ * @returns A NextResponse confirming cancellation or describing an error.
+ */
 // DELETE /api/bookings/[id] — Cancel booking (soft-delete: set status to abgesagt)
 export async function DELETE(
   request: NextRequest,

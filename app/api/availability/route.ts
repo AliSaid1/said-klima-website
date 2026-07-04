@@ -1,11 +1,44 @@
+/**
+ * Availability API routes for booking availability (Verfügbarkeit).
+ *
+ * Computes public appointment slots from Supabase tables for technician
+ * schedules, blocked booking dates (gesperrte_tage), existing bookings
+ * (buchungen), and service (Dienstleistung) durations.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+/**
+ * Converts minutes after midnight to a zero-padded 24-hour time string.
+ *
+ * @param m - Minute offset after midnight.
+ * @returns A time string in `HH:MM` format.
+ */
 // Helper: minutes → "HH:MM"
 function mToTime(m: number) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
+/**
+ * GET /api/availability
+ *
+ * Public endpoint that returns available booking slots for one date. Reads
+ * query params `date` (required, ISO date), `total_duration` (optional total
+ * service duration in minutes), and legacy `dienstleistung_id` (service ID).
+ *
+ * Uses the Supabase admin client to read `gesperrte_tage` (blocked booking
+ * dates), `techniker_verfuegbarkeit` (technician availability), `techniker`,
+ * `buchungen` (bookings), and optionally `dienstleistungen` (services).
+ *
+ * Returns `200` with `{ data, blocked, durationMinutes? }`; `data` contains
+ * slot objects with start/end times and technician identity. Returns `400`
+ * when `date` is missing and `500` when the availability query fails.
+ *
+ * Side effects: none; this route only reads Supabase data.
+ *
+ * @param request - The incoming NextRequest containing availability query parameters.
+ * @returns A NextResponse with available slots, blocked-day information, or an error.
+ */
 // GET /api/availability?date=2026-03-15&total_duration=120
 // OR  /api/availability?date=2026-03-15&dienstleistung_id=uuid  (legacy)
 // Returns available time slots for a given date.
@@ -127,4 +160,3 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ data: slots, blocked: false, durationMinutes });
 }
-
