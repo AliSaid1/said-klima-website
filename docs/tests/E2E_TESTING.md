@@ -440,6 +440,8 @@ Status legend: ✅ automated & asserting an end state · ⚠️ partial / up-to-
 | 2026-07   | Checkout pricing    | Shipping waived at/above the `versandkostenlos_ab` threshold (fallback 500 €)                            | `tests/checkout-pricing.spec.ts` | ✅     |
 | 2026-07   | Checkout pricing    | Multi-item cart total is the DB-derived sum of all line items                                            | `tests/checkout-pricing.spec.ts` | ✅     |
 | 2026-07   | Seed fixtures       | Added inactive article (`…000b`, 500 €) + cheap article (`…000c`, 99 €) with stock rows                  | `supabase/migrations/004_seed_testdaten.sql` | ✅ |
+| 2026-07   | CI flake fix        | `contact.spec.ts` intermittently got `429` in CI: `/api/contact` calls `rateLimit()` **directly** (5/10 min per IP) and did **not** honor `DISABLE_RATE_LIMIT`. Moved the flag guard into `rateLimit()` itself so all direct callers (contact + upload) skip limiting in the suite — mirrors the middleware. | `lib/rate-limit.ts` | ✅ |
+| 2026-07   | Mobile UI fix       | `/cart` overflowed horizontally on mobile (long, `nowrap`-truncated product title expanded the implicit grid track). Added `grid-cols-1` + `min-w-0`. Verified 0 overflow on all public pages at 360/390 px. | `app/cart/page.tsx` | ✅ |
 
 ### 8.3 Known coverage gaps (accepted)
 

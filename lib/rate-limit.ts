@@ -105,6 +105,14 @@ export async function rateLimit(
   max: number,
   windowSecs: number,
 ): Promise<RateLimitResult> {
+  // Test/CI escape hatch: when DISABLE_RATE_LIMIT=1 is set, never limit. This
+  // mirrors the same guard in middleware.ts and keeps direct callers (e.g. the
+  // contact + upload routes) from tripping 429s when the E2E suite fires many
+  // requests from one IP. Never set in production.
+  if (process.env.DISABLE_RATE_LIMIT === '1') {
+    return { allowed: true, remaining: max, resetIn: 0 };
+  }
+
   const upstash = await upstashRateLimit(key, max, windowSecs);
   if (upstash) return upstash;
   return memoryRateLimit(key, max, windowSecs);
