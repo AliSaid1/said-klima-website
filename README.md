@@ -13,6 +13,10 @@ for a German refrigeration & air-conditioning business.
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38BDF8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel)](https://vercel.com/)
 
+### 🔴 [**Live Demo → kks-said.de**](https://kks-said.de)
+
+*Public storefront, shop & booking are live. The admin dashboard/CMS is access-protected — see the [screenshots](#-screenshots) below.*
+
 </div>
 
 ---
