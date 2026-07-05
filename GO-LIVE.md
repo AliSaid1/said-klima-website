@@ -16,10 +16,23 @@ Work top to bottom. Nothing here contains secrets — fill real values only in t
   - [ ] `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` = `pk_live_…`
 - [ ] Create a **live** webhook endpoint (Dashboard → Developers → Webhooks → Add endpoint):
   - URL: `https://<your-domain>/api/webhooks/stripe`
-  - Event: `checkout.session.completed`
+  - Subscribe to **all 5 events the handler processes** (`app/api/webhooks/stripe/route.ts`).
+        Selecting *more* events than these is harmless — the handler ignores unknown types —
+        but each of these **must** be included:
+    - [ ] `checkout.session.completed` — card paid → `bezahlt`; bank transfer → `warten_auf_zahlung`
+    - [ ] `checkout.session.async_payment_succeeded` — **bank transfer arrived → `bezahlt` + sends the confirmation email & PDF.** Missing this = bank-transfer orders stay unpaid forever with no email.
+    - [ ] `checkout.session.async_payment_failed` — delayed payment failed → `fehlgeschlagen`
+    - [ ] `payment_intent.payment_failed` — card declined → records the failure on the order
+    - [ ] `checkout.session.expired` — unpaid session expired → `storniert`
   - [ ] Copy that endpoint's signing secret into Vercel `STRIPE_WEBHOOK_SECRET` = `whsec_…`
+        (must be the **live-mode** secret, not the test one).
 - [ ] Verify the webhook is **not** still pointing at a test/old value (this exact mismatch
       silently blocks the order-confirmation email).
+
+> ⚠️ **Why 5 events, not 1?** Checkout enables **Banküberweisung (bank transfer)**, which is a
+> *delayed* payment. Such orders are only marked `bezahlt` — and the confirmation email/PDF is
+> only sent — by `checkout.session.async_payment_succeeded`. Subscribing to
+> `checkout.session.completed` alone works for cards but silently breaks bank-transfer orders.
 
 > ℹ️ `stripe listen` is for **local dev only**. In production the Dashboard webhook endpoint
 > above is what delivers events. The order-confirmation email is sent **only** by this webhook,
@@ -62,6 +75,10 @@ Work top to bottom. Nothing here contains secrets — fill real values only in t
       degrades gracefully if unset, but recommended in prod).
 - [ ] **Do not** set `DISABLE_RATE_LIMIT` in production (it is a CI-only escape hatch).
 - [ ] Set env vars for the correct Vercel environment (Production / Preview) as intended.
+- [ ] ⚠️ **Scope the live Stripe keys to _Production only_.** If a Preview/staging environment
+      exists with **test** Stripe keys, setting the live `sk_live_…` / `pk_live_…` /
+      `whsec_…` to "All Environments" would make **preview deploys charge real cards**.
+      Keep Preview on the test keys; Production on the live keys.
 
 ---
 
@@ -111,7 +128,7 @@ Work top to bottom. Nothing here contains secrets — fill real values only in t
 
 | Item | Path / command |
 |---|---|
-| Stripe webhook | `POST /api/webhooks/stripe` |
+| Stripe webhook | `POST /api/webhooks/stripe` (subscribe to the 5 events in §1) |
 | Booking-reminder cron | `GET /api/cron/booking-reminders` (daily 08:00) |
 | Apply DB migrations | `npm run migrate` |
 | Run E2E tests | `npm test` |
